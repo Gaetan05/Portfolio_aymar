@@ -1,0 +1,132 @@
+---
+import { getEntry, render } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import Timeline from '../components/Timeline.astro';
+import { site } from '../site.config';
+import { getExperience, url } from '../lib/content';
+
+const about = await getEntry('pages', 'about');
+const { Content } = about ? await render(about) : { Content: null };
+const experience = await getExperience();
+const work = experience.filter((e) => e.data.kind === 'work' || e.data.kind === 'volunteer');
+const education = experience.filter((e) => e.data.kind === 'education' || e.data.kind === 'certification');
+const awards = experience.filter((e) => e.data.kind === 'award');
+---
+
+<Base title="About" description={about?.data.description ?? site.intro}>
+  <section class="wrap page-head">
+    <p class="eyebrow">About me</p>
+    <h1>{about?.data.title ?? `About ${site.name}`}</h1>
+  </section>
+
+  <section class="wrap intro">
+    <div class="prose">{Content && <Content />}</div>
+    <aside class="card side">
+      <p class="eyebrow">Quick facts</p>
+      <dl>
+        <dt>Name</dt><dd>{site.name}</dd>
+        <dt>Role</dt><dd>{site.headline}</dd>
+        {site.location && <><dt>Based</dt><dd>{site.location}</dd></>}
+        {site.languages.length > 0 && <><dt>Speaks</dt><dd>{site.languages.map((l) => l.name).join(', ')}</dd></>}
+      </dl>
+      <div class="side-cta">
+        <a class="btn" href={url('cv')}>View CV</a>
+        {site.email && <a class="btn ghost" href={`mailto:${site.email}`}>Email me</a>}
+      </div>
+      <div class="chips socials">
+        {site.socials.map((s) => <a class="chip" href={s.url} rel="me noopener" target="_blank">{s.label} ↗</a>)}
+      </div>
+    </aside>
+  </section>
+
+  <section class="wrap section">
+    <div class="section-head"><div><p class="eyebrow">Toolbox</p><h2>Skills</h2></div></div>
+    <div class="skills">
+      {site.skills.map((g) => (
+        <div class="skill card reveal">
+          <h3>{g.group}</h3>
+          <div class="chips">{g.items.map((i) => <span class="chip">{i}</span>)}</div>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  {work.length > 0 && (
+    <section class="wrap section">
+      <div class="section-head"><div><p class="eyebrow">Career</p><h2>Experience</h2></div></div>
+      <Timeline items={work} />
+    </section>
+  )}
+
+  {education.length > 0 && (
+    <section class="wrap section">
+      <div class="section-head"><div><p class="eyebrow">Learning</p><h2>Education & certifications</h2></div></div>
+      <Timeline items={education} />
+    </section>
+  )}
+
+  {awards.length > 0 && (
+    <section class="wrap section">
+      <div class="section-head"><div><p class="eyebrow">Recognition</p><h2>Awards</h2></div></div>
+      <Timeline items={awards} />
+    </section>
+  )}
+</Base>
+
+<style>
+  .intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 3rem;
+    align-items: start;
+  }
+  .prose :global(p:first-child) {
+    font-size: 1.3rem;
+    font-family: var(--font-display);
+    line-height: 1.45;
+  }
+  .side {
+    padding: 1.5rem;
+    position: sticky;
+    top: 90px;
+  }
+  dl {
+    display: grid;
+    grid-template-columns: 70px 1fr;
+    gap: 0.5rem 1rem;
+    margin: 1.2rem 0;
+    font-size: 0.93rem;
+  }
+  dt {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    padding-top: 0.2rem;
+  }
+  dd {
+    margin: 0;
+  }
+  .side-cta {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.2rem;
+  }
+  .skills {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+    gap: 1rem;
+  }
+  .skill {
+    padding: 1.4rem;
+  }
+  @media (max-width: 900px) {
+    .intro {
+      grid-template-columns: 1fr;
+    }
+    .side {
+      position: static;
+    }
+  }
+</style>

@@ -1,0 +1,27 @@
+---
+import Base from '../layouts/Base.astro';
+import { url } from '../lib/content';
+---
+
+<Base title="Not found" noindex>
+  <section class="wrap page-head nf">
+    <p class="eyebrow">Error 404</p>
+    <h1>This page wandered off.</h1>
+    <p class="lede">It might have moved, or it never existed. Try searching — or head home.</p>
+    <div class="cta">
+      <a class="btn" href={url()}>Back home</a>
+      <button class="btn ghost" type="button" data-open-search>Search the site</button>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .nf {
+    min-height: 55vh;
+  }
+  .cta {
+    display: flex;
+    gap: 0.6rem;
+    margin-top: 2rem;
+  }
+</style>

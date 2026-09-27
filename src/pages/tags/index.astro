@@ -1,0 +1,45 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getTagIndex, url } from '../../lib/content';
+const tags = [...(await getTagIndex())].sort((a, b) => b[1].items.length - a[1].items.length || a[0].localeCompare(b[0]));
+const max = Math.max(1, ...tags.map(([, t]) => t.items.length));
+---
+
+<Base title="Tags" description="Every topic on the site, across projects, notes, hobbies and the shelf.">
+  <section class="wrap page-head">
+    <p class="eyebrow">Index</p>
+    <h1>Tags</h1>
+    <p class="lede">Every topic on the site — across projects, journal, hobbies and the shelf. The bigger, the more I care.</p>
+  </section>
+  <section class="wrap cloud">
+    {
+      tags.map(([slug, t]) => (
+        <a href={url(`tags/${slug}`)} style={`--w:${0.9 + (t.items.length / max) * 1.4}rem`}>
+          {t.label}
+          <sup>{t.items.length}</sup>
+        </a>
+      ))
+    }
+  </section>
+</Base>
+
+<style>
+  .cloud {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 1.4rem;
+    align-items: baseline;
+    padding-bottom: 60px;
+  }
+  a {
+    font-family: var(--font-display);
+    font-size: var(--w);
+    text-decoration: none;
+  }
+  sup {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--ink-mute);
+    margin-left: 0.15em;
+  }
+</style>

@@ -1,0 +1,150 @@
+---
+import { Image } from 'astro:assets';
+import type { CollectionEntry } from 'astro:content';
+import { url, statusLabel } from '../lib/content';
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+  large?: boolean;
+}
+const { project, large = false } = Astro.props;
+const { title, summary, date, status, stack, cover, accent } = project.data;
+---
+
+<a
+  class:list={['project card reveal', { large }]}
+  href={url(`projects/${project.id}`)}
+  style={accent ? `--tint:${accent}` : undefined}
+  data-filter-item
+  data-filter-keys={[status, ...stack].join('|')}
+>
+  <div class="visual">
+    {
+      cover ? (
+        <Image src={cover} alt="" widths={[480, 800]} sizes="(max-width: 700px) 100vw, 50vw" />
+      ) : (
+        <span class="monogram" aria-hidden="true">
+          {title.slice(0, 1)}
+        </span>
+      )
+    }
+    <span class:list={['status chip', status]}>{statusLabel[status]}</span>
+  </div>
+  <div class="body">
+    <p class="meta">{date.getUTCFullYear()}{project.data.role && ` · ${project.data.role}`}</p>
+    <h3>{title}</h3>
+    <p class="summary">{summary}</p>
+    {
+      stack.length > 0 && (
+        <div class="chips">
+          {stack.slice(0, 5).map((s) => (
+            <span class="chip">{s}</span>
+          ))}
+        </div>
+      )
+    }
+  </div>
+</a>
+
+<style>
+  .project {
+    --tint: var(--accent);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    text-decoration: none;
+    color: var(--ink);
+    transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1), box-shadow 0.25s, border-color 0.25s;
+  }
+  .project:hover {
+    color: var(--ink);
+    transform: translateY(-4px);
+    border-color: color-mix(in oklab, var(--tint) 50%, var(--line));
+  }
+  .visual {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background:
+      radial-gradient(120% 120% at 100% 0%, color-mix(in oklab, var(--tint) 55%, transparent), transparent 60%),
+      radial-gradient(90% 90% at 0% 100%, color-mix(in oklab, var(--tint) 25%, transparent), transparent 70%),
+      var(--bg-sunk);
+    overflow: hidden;
+  }
+  .visual :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s;
+  }
+  .project:hover .visual :global(img) {
+    transform: scale(1.04);
+  }
+  .monogram {
+    position: absolute;
+    right: 6%;
+    bottom: -18%;
+    font-family: var(--font-display);
+    font-size: clamp(7rem, 16vw, 11rem);
+    font-weight: 700;
+    line-height: 1;
+    color: color-mix(in oklab, var(--tint) 70%, var(--ink));
+    opacity: 0.85;
+    transition: transform 0.4s;
+  }
+  .project:hover .monogram {
+    transform: translateY(-6px) rotate(-4deg);
+  }
+  .status {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+  }
+  .status.in-progress::before,
+  .status.shipped::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ok);
+  }
+  .status.in-progress::before {
+    background: #e7a500;
+  }
+  .body {
+    padding: 1.2rem 1.3rem 1.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    flex: 1;
+  }
+  h3 {
+    margin: 0;
+  }
+  .summary {
+    color: var(--ink-soft);
+    font-size: 0.97rem;
+    margin: 0 0 0.6rem;
+  }
+  .chips {
+    margin-top: auto;
+  }
+  @media (min-width: 860px) {
+    .large {
+      grid-column: span 2;
+      flex-direction: row;
+    }
+    .large .visual {
+      flex: 1.3;
+      aspect-ratio: auto;
+      min-height: 320px;
+    }
+    .large .body {
+      flex: 1;
+      padding: 2rem;
+      justify-content: center;
+    }
+    .large h3 {
+      font-size: 2rem;
+    }
+  }
+</style>

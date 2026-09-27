@@ -1,0 +1,473 @@
+---
+import { render } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import ProjectCard from '../components/ProjectCard.astro';
+import JournalItem from '../components/JournalItem.astro';
+import { site } from '../site.config';
+import { url, getProjects, getJournal, getHobbies, getShelf, getNow, getExperience, formatDate } from '../lib/content';
+
+const [projects, journal, hobbies, shelf, now, experience] = await Promise.all([
+  getProjects(),
+  getJournal(),
+  getHobbies(),
+  getShelf(),
+  getNow(),
+  getExperience(),
+]);
+
+const featured = (projects.filter((p) => p.data.featured).length ? projects.filter((p) => p.data.featured) : projects).slice(0, 3);
+const latest = journal.slice(0, 4);
+const currentNow = now[0];
+const NowContent = currentNow ? (await render(currentNow)).Content : null;
+const current = experience.find((e) => !e.data.end && e.data.kind === 'work');
+const picks = shelf.filter((s) => s.data.favorite || s.data.status === 'in-progress').slice(0, 6);
+const discoveries = journal.filter((j) => j.data.kind === 'discovery' || j.data.kind === 'til').length;
+
+const stats = [
+  { n: projects.length, label: 'Projects', href: 'projects' },
+  { n: journal.length, label: 'Journal entries', href: 'journal' },
+  { n: discoveries, label: 'Discoveries & TILs', href: 'journal?filter=discovery' },
+  { n: shelf.length, label: 'Things on the shelf', href: 'shelf' },
+];
+---
+
+<Base>
+  <!-- ───── Hero ───── -->
+  <section class="hero wrap">
+    <div class="hero-text">
+      {
+        site.availability.open && (
+          <p class="badge">
+            <span class="dot" />
+            {site.availability.label}
+          </p>
+        )
+      }
+      <h1>
+        Hi, I’m {site.name.split(' ')[0]}.<br />
+        I <span class="rotator" data-words={JSON.stringify(site.heroVerbs)}>{site.heroVerbs[0]}</span><span class="caret">.</span>
+      </h1>
+      <p class="lede">{site.intro}</p>
+      <div class="cta">
+        <a class="btn" href={url('projects')}>See my work</a>
+        <a class="btn ghost" href={url('about')}>More about me</a>
+        <a class="btn ghost" href={url('cv')}>CV</a>
+      </div>
+    </div>
+    <aside class="hero-card card">
+      <p class="eyebrow">Right now</p>
+      <ul class="facts">
+        {
+          current && (
+            <li>
+              <span class="k">Working</span>
+              <span>
+                {current.data.role} @ {current.data.org}
+              </span>
+            </li>
+          )
+        }
+        {site.location && (
+          <li>
+            <span class="k">Based</span>
+            <span>{site.location}</span>
+          </li>
+        )}
+        {
+          journal[0] && (
+            <li>
+              <span class="k">Writing</span>
+              <a href={url(`journal/${journal[0].id}`)}>{journal[0].data.title}</a>
+            </li>
+          )
+        }
+        {
+          shelf.find((s) => s.data.status === 'in-progress') && (
+            <li>
+              <span class="k">Into</span>
+              <span>{shelf.find((s) => s.data.status === 'in-progress')!.data.title}</span>
+            </li>
+          )
+        }
+      </ul>
+      {currentNow && <a class="more-link" href={url('now')}>Updated {formatDate(currentNow.data.date)}</a>}
+    </aside>
+  </section>
+
+  <!-- ───── Stats ───── -->
+  <section class="wrap stats">
+    {
+      stats.map((s) => (
+        <a class="stat reveal" href={url(s.href)}>
+          <span class="n">{s.n}</span>
+          <span class="l">{s.label}</span>
+        </a>
+      ))
+    }
+  </section>
+
+  <!-- ───── Featured projects ───── -->
+  {
+    featured.length > 0 && (
+      <section class="section wrap">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Selected work</p>
+            <h2>Things I’ve made</h2>
+          </div>
+          <a class="more-link" href={url('projects')}>
+            All {projects.length} projects
+          </a>
+        </div>
+        <div class="grid">
+          {featured.map((p, i) => (
+            <ProjectCard project={p} large={i === 0} />
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  <!-- ───── Journal + Now ───── -->
+  <section class="section wrap split">
+    <div>
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Journal</p>
+          <h2>Notes, essays & discoveries</h2>
+        </div>
+        <a class="more-link" href={url('journal')}>Read all</a>
+      </div>
+      <ul class="journal-list">
+        {latest.map((e) => <JournalItem entry={e} />)}
+      </ul>
+    </div>
+    {
+      currentNow && NowContent && (
+        <aside class="now card reveal">
+          <p class="eyebrow">/now</p>
+          <p class="meta">
+            {formatDate(currentNow.data.date)}
+            {currentNow.data.location && ` · ${currentNow.data.location}`}
+          </p>
+          <div class="prose small">
+            <NowContent />
+          </div>
+          <a class="more-link" href={url('now')}>
+            What I’m up to
+          </a>
+        </aside>
+      )
+    }
+  </section>
+
+  <!-- ───── Hobbies ───── -->
+  {
+    hobbies.length > 0 && (
+      <section class="section wrap">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Off the clock</p>
+            <h2>Hobbies & obsessions</h2>
+          </div>
+          <a class="more-link" href={url('hobbies')}>
+            Explore
+          </a>
+        </div>
+        <div class="hobbies">
+          {hobbies.map((h) => (
+            <a class="hobby card reveal" href={url(`hobbies/${h.id}`)}>
+              <span class="icon">{h.data.icon}</span>
+              <h3>{h.data.title}</h3>
+              <p>{h.data.summary}</p>
+            </a>
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  <!-- ───── Shelf ───── -->
+  {
+    picks.length > 0 && (
+      <section class="section wrap">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">The shelf</p>
+            <h2>Books, films, tools & finds I love</h2>
+          </div>
+          <a class="more-link" href={url('shelf')}>
+            Full shelf
+          </a>
+        </div>
+        <div class="picks">
+          {picks.map((s) => (
+            <a class="pick reveal" href={url(`shelf#${s.id}`)}>
+              <span class="meta">{s.data.kind}</span>
+              <strong>{s.data.title}</strong>
+              {s.data.creator && <span class="by">{s.data.creator}</span>}
+            </a>
+          ))}
+        </div>
+      </section>
+    )
+  }
+</Base>
+
+<script>
+  // Typewriter for the hero verbs
+  const el = document.querySelector<HTMLElement>('.rotator');
+  if (el && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const words: string[] = JSON.parse(el.dataset.words || '[]');
+    let w = 0;
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    (async () => {
+      while (words.length > 1) {
+        await sleep(2200);
+        for (let i = el.textContent!.length; i >= 0; i--) {
+          el.textContent = words[w].slice(0, i);
+          await sleep(28);
+        }
+        w = (w + 1) % words.length;
+        for (let i = 1; i <= words[w].length; i++) {
+          el.textContent = words[w].slice(0, i);
+          await sleep(55);
+        }
+      }
+    })();
+  }
+</script>
+
+<style>
+  .hero {
+    display: grid;
+    grid-template-columns: 1.6fr 1fr;
+    gap: clamp(2rem, 5vw, 4rem);
+    align-items: end;
+    padding-top: clamp(56px, 10vw, 130px);
+    padding-bottom: clamp(40px, 6vw, 72px);
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    padding: 0.45em 0.9em;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--bg-elev);
+    color: var(--ink-soft);
+    margin-bottom: 1.6rem;
+  }
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--ok);
+    box-shadow: 0 0 0 0 var(--ok);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    70% {
+      box-shadow: 0 0 0 8px transparent;
+    }
+    100% {
+      box-shadow: 0 0 0 0 transparent;
+    }
+  }
+  h1 {
+    font-size: clamp(2.7rem, 7.4vw, 5.6rem);
+    line-height: 1.02;
+    margin-bottom: 0.45em;
+  }
+  .rotator {
+    font-style: italic;
+    color: var(--accent);
+    font-weight: 500;
+  }
+  .caret {
+    color: var(--accent);
+  }
+  .lede {
+    font-size: clamp(1.08rem, 2vw, 1.28rem);
+    color: var(--ink-soft);
+    max-width: 54ch;
+  }
+  .cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 2rem;
+  }
+  .hero-card {
+    padding: 1.5rem;
+    transform: rotate(1.2deg);
+    transition: transform 0.4s;
+  }
+  .hero-card:hover {
+    transform: rotate(0);
+  }
+  .facts {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0 1.2rem;
+  }
+  .facts li {
+    display: grid;
+    grid-template-columns: 76px 1fr;
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    border-top: 1px dashed var(--line);
+    font-size: 0.95rem;
+  }
+  .k {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-mute);
+    padding-top: 0.2rem;
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-block: 1px solid var(--line);
+  }
+  .stat {
+    display: flex;
+    flex-direction: column;
+    padding: 1.6rem 1.2rem;
+    text-decoration: none;
+    border-left: 1px solid var(--line);
+  }
+  .stat:first-child {
+    border-left: 0;
+  }
+  .stat .n {
+    font-family: var(--font-display);
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    font-weight: 600;
+    line-height: 1;
+  }
+  .stat .l {
+    font-size: 0.85rem;
+    color: var(--ink-mute);
+    margin-top: 0.4rem;
+  }
+  .stat:hover .n {
+    color: var(--accent);
+  }
+
+  .split {
+    display: grid;
+    grid-template-columns: 1.7fr 1fr;
+    gap: 3rem;
+    align-items: start;
+  }
+  .journal-list {
+    margin: 0;
+    padding: 0;
+  }
+  .now {
+    padding: 1.6rem;
+    position: sticky;
+    top: 90px;
+  }
+  .prose.small {
+    font-size: 0.97rem;
+    margin: 1rem 0 1.2rem;
+  }
+
+  .hobbies {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+    gap: 1rem;
+  }
+  .hobby {
+    padding: 1.5rem;
+    text-decoration: none;
+    transition: transform 0.25s, border-color 0.25s;
+  }
+  .hobby:hover {
+    color: var(--ink);
+    transform: translateY(-3px);
+    border-color: var(--accent);
+  }
+  .hobby .icon {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 0.8rem;
+  }
+  .hobby h3 {
+    margin-bottom: 0.3rem;
+  }
+  .hobby p {
+    color: var(--ink-soft);
+    font-size: 0.93rem;
+    margin: 0;
+  }
+
+  .picks {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+    gap: 1rem;
+  }
+  .pick {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 1.2rem 1.2rem 1.4rem;
+    border-radius: 6px 16px 16px 6px;
+    border: 1px solid var(--line);
+    border-left: 6px solid var(--accent);
+    background: var(--bg-elev);
+    text-decoration: none;
+    min-height: 150px;
+    transition: transform 0.25s;
+  }
+  .pick:nth-child(3n + 2) {
+    border-left-color: var(--ink);
+  }
+  .pick:nth-child(3n) {
+    border-left-color: var(--ok);
+  }
+  .pick:hover {
+    color: var(--ink);
+    transform: translateY(-3px) rotate(-0.6deg);
+  }
+  .pick strong {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    line-height: 1.2;
+    font-weight: 600;
+  }
+  .pick .by {
+    color: var(--ink-mute);
+    font-size: 0.88rem;
+    margin-top: auto;
+  }
+
+  @media (max-width: 900px) {
+    .hero,
+    .split {
+      grid-template-columns: 1fr;
+    }
+    .hero-card {
+      transform: none;
+    }
+    .now {
+      position: static;
+    }
+    .stats {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .stat:nth-child(3) {
+      border-left: 0;
+    }
+    .stat:nth-child(n + 3) {
+      border-top: 1px solid var(--line);
+    }
+  }
+</style>

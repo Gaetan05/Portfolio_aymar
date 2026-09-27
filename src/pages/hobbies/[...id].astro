@@ -1,0 +1,28 @@
+---
+import { render } from 'astro:content';
+import Entry from '../../layouts/Entry.astro';
+import { getHobbies, url } from '../../lib/content';
+
+export async function getStaticPaths() {
+  const hobbies = await getHobbies();
+  return hobbies.map((h) => ({ params: { id: h.id }, props: { hobby: h } }));
+}
+
+const { hobby } = Astro.props;
+const { Content, headings } = await render(hobby);
+const d = hobby.data;
+---
+
+<Entry
+  title={`${d.icon} ${d.title}`}
+  description={d.summary}
+  eyebrow="Hobby"
+  back={{ href: url('hobbies'), label: 'All hobbies' }}
+  meta={d.since ? [`Since ${d.since}`] : []}
+  tags={d.tags}
+  cover={d.cover}
+  headings={headings}
+  type="website"
+>
+  <Content />
+</Entry>

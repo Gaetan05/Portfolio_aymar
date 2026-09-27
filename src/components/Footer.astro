@@ -1,0 +1,81 @@
+---
+import { nav, site } from '../site.config';
+import { url } from '../lib/content';
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer no-print">
+  <div class="wrap">
+    <div class="cta">
+      <p class="eyebrow">Say hello</p>
+      <h2>Let’s build, learn or wander<br />something together.</h2>
+      {site.email && <a class="btn" href={`mailto:${site.email}`}>{site.email}</a>}
+    </div>
+    <div class="cols">
+      <div>
+        <p class="label">Explore</p>
+        <ul>
+          <li><a href={url()}>Home</a></li>
+          {nav.map((n) => <li><a href={url(n.href)}>{n.label}</a></li>)}
+        </ul>
+      </div>
+      <div>
+        <p class="label">More</p>
+        <ul>
+          <li><a href={url('cv')}>CV / Résumé</a></li>
+          <li><a href={url('tags')}>All tags</a></li>
+          <li><a href={url('rss.xml')}>RSS feed</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="label">Elsewhere</p>
+        <ul>
+          {site.socials.map((s) => <li><a href={s.url} rel="me noopener" target={s.url.startsWith('http') ? '_blank' : undefined}>{s.label}</a></li>)}
+        </ul>
+      </div>
+    </div>
+    <p class="fine meta">© {year} {site.name} · Built with Astro · Always a work in progress</p>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    border-top: 1px solid var(--line);
+    padding-block: clamp(56px, 8vw, 96px) 32px;
+    margin-top: 40px;
+    background: var(--bg-sunk);
+  }
+  .cta h2 {
+    font-size: clamp(1.8rem, 4.5vw, 3rem);
+    margin: 0.4em 0 0.8em;
+  }
+  .cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 2rem;
+    margin-top: 4rem;
+  }
+  .label {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--ink-mute);
+    margin-bottom: 0.8em;
+  }
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  li + li {
+    margin-top: 0.35em;
+  }
+  ul a {
+    text-decoration: none;
+    color: var(--ink-soft);
+  }
+  .fine {
+    margin: 4rem 0 0;
+  }
+</style>

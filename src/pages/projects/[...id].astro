@@ -1,0 +1,74 @@
+---
+import { render } from 'astro:content';
+import Entry from '../../layouts/Entry.astro';
+import { getProjects, url, formatDate, statusLabel } from '../../lib/content';
+
+export async function getStaticPaths() {
+  const projects = await getProjects();
+  return projects.map((p, i) => ({
+    params: { id: p.id },
+    props: { project: p, prev: projects[i - 1], next: projects[i + 1] },
+  }));
+}
+
+const { project, prev, next } = Astro.props;
+const { Content, headings } = await render(project);
+const d = project.data;
+const meta = [
+  formatDate(d.date, { year: 'numeric', month: 'long' }),
+  statusLabel[d.status],
+  ...(d.role ? [d.role] : []),
+  ...(d.updated ? [`Updated ${formatDate(d.updated)}`] : []),
+];
+---
+
+<Entry
+  title={d.title}
+  description={d.summary}
+  eyebrow="Project"
+  back={{ href: url('projects'), label: 'All projects' }}
+  meta={meta}
+  tags={d.tags}
+  cover={d.cover}
+  headings={headings}
+  prev={prev && { href: url(`projects/${prev.id}`), title: prev.data.title }}
+  next={next && { href: url(`projects/${next.id}`), title: next.data.title }}
+>
+  <div slot="aside" class="aside">
+    {
+      d.stack.length > 0 && (
+        <div class="chips">
+          {d.stack.map((s) => (
+            <span class="chip is-accent">{s}</span>
+          ))}
+        </div>
+      )
+    }
+    {
+      d.links.length > 0 && (
+        <div class="links">
+          {d.links.map((l, i) => (
+            <a class:list={['btn', { ghost: i > 0 }]} href={l.url} target="_blank" rel="noopener">
+              {l.label} ↗
+            </a>
+          ))}
+        </div>
+      )
+    }
+  </div>
+  <Content />
+</Entry>
+
+<style>
+  .aside {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    margin-top: 1.5rem;
+  }
+  .links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+</style>

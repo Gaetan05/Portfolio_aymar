@@ -1,0 +1,196 @@
+---
+/** Shared layout for a single project / journal entry / hobby page. */
+import type { MarkdownHeading } from 'astro';
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import Base from './Base.astro';
+import { url, slugify } from '../lib/content';
+
+interface Props {
+  title: string;
+  description: string;
+  eyebrow: string;
+  back: { href: string; label: string };
+  meta?: string[];
+  tags?: string[];
+  cover?: ImageMetadata;
+  headings?: MarkdownHeading[];
+  prev?: { href: string; title: string };
+  next?: { href: string; title: string };
+  type?: 'website' | 'article';
+}
+
+const { title, description, eyebrow, back, meta = [], tags = [], cover, headings = [], prev, next, type = 'article' } = Astro.props;
+const toc = headings.filter((h) => h.depth <= 3);
+---
+
+<Base title={title} description={description} type={type}>
+  <article class="wrap entry">
+    <header class="head">
+      <a class="back meta no-print" href={back.href}>← {back.label}</a>
+      <p class="eyebrow">{eyebrow}</p>
+      <h1>{title}</h1>
+      <p class="lede">{description}</p>
+      {meta.length > 0 && <p class="meta line">{meta.join('  ·  ')}</p>}
+      <slot name="aside" />
+    </header>
+
+    {cover && <Image class="cover" src={cover} alt="" widths={[800, 1200, 1600]} sizes="(max-width: 1120px) 100vw, 1120px" />}
+
+    <div class:list={['layout', { 'has-toc': toc.length > 2 }]}>
+      {
+        toc.length > 2 && (
+          <nav class="toc no-print" aria-label="On this page">
+            <p class="eyebrow">On this page</p>
+            <ul>
+              {toc.map((h) => (
+                <li class={`d${h.depth}`}>
+                  <a href={`#${h.slug}`}>{h.text}</a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )
+      }
+      <div class="prose">
+        <slot />
+      </div>
+    </div>
+
+    {
+      tags.length > 0 && (
+        <div class="chips tags">
+          {tags.map((t) => (
+            <a class="chip" href={url(`tags/${slugify(t)}`)}>
+              #{t}
+            </a>
+          ))}
+        </div>
+      )
+    }
+
+    {
+      (prev || next) && (
+        <nav class="pager no-print" aria-label="More">
+          {prev ? (
+            <a class="card" href={prev.href}>
+              <span class="meta">← Newer</span>
+              <strong>{prev.title}</strong>
+            </a>
+          ) : (
+            <span />
+          )}
+          {next && (
+            <a class="card right" href={next.href}>
+              <span class="meta">Older →</span>
+              <strong>{next.title}</strong>
+            </a>
+          )}
+        </nav>
+      )
+    }
+  </article>
+</Base>
+
+<style>
+  .entry {
+    padding-bottom: 60px;
+  }
+  .head {
+    padding-top: clamp(40px, 7vw, 88px);
+    padding-bottom: 2.5rem;
+    max-width: 860px;
+  }
+  .back {
+    display: block;
+    width: fit-content;
+    text-decoration: none;
+    margin-bottom: 2rem;
+  }
+  h1 {
+    margin-top: 0.35em;
+    view-transition-name: entry-title;
+  }
+  .lede {
+    font-size: clamp(1.1rem, 2.2vw, 1.35rem);
+    color: var(--ink-soft);
+    max-width: 60ch;
+  }
+  .line {
+    margin-top: 1.2rem;
+  }
+  .cover {
+    width: 100%;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--line);
+    margin-bottom: 3rem;
+  }
+  .layout.has-toc {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 3rem;
+  }
+  .toc {
+    position: sticky;
+    top: 100px;
+    align-self: start;
+    font-size: 0.88rem;
+  }
+  .toc ul {
+    list-style: none;
+    padding: 0;
+    margin: 0.8rem 0 0;
+    border-left: 1px solid var(--line);
+  }
+  .toc li {
+    padding: 0.25rem 0 0.25rem 0.9rem;
+  }
+  .toc li.d3 {
+    padding-left: 1.7rem;
+  }
+  .toc a {
+    text-decoration: none;
+    color: var(--ink-soft);
+  }
+  .tags {
+    margin-top: 3rem;
+  }
+  .pager {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 3rem;
+  }
+  .pager a {
+    padding: 1.2rem 1.4rem;
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .pager a:hover {
+    border-color: var(--accent);
+  }
+  .pager .right {
+    text-align: right;
+    grid-column: 2;
+  }
+  .pager strong {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+  }
+  @media (max-width: 900px) {
+    .layout.has-toc {
+      grid-template-columns: 1fr;
+    }
+    .toc {
+      display: none;
+    }
+    .pager {
+      grid-template-columns: 1fr;
+    }
+    .pager .right {
+      grid-column: auto;
+    }
+  }
+</style>

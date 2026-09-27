@@ -1,0 +1,83 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getTagIndex, url, formatDate } from '../../lib/content';
+
+export async function getStaticPaths() {
+  const index = await getTagIndex();
+  return [...index].map(([slug, t]) => ({ params: { tag: slug }, props: t }));
+}
+
+const { label, items } = Astro.props;
+const sorted = [...items].sort((a, b) => (b.date?.valueOf() ?? 0) - (a.date?.valueOf() ?? 0));
+---
+
+<Base title={`#${label}`} description={`Everything tagged “${label}”.`}>
+  <section class="wrap page-head">
+    <a class="meta back" href={url('tags')}>← All tags</a>
+    <p class="eyebrow">Tag</p>
+    <h1>#{label}</h1>
+    <p class="lede">{items.length} {items.length === 1 ? 'thing' : 'things'} tagged “{label}”.</p>
+  </section>
+  <ul class="wrap list">
+    {
+      sorted.map((i) => (
+        <li>
+          <a href={i.href}>
+            <span class="chip">{i.kind}</span>
+            <span class="t">
+              <strong>{i.title}</strong>
+              {i.description && <span class="d">{i.description}</span>}
+            </span>
+            {i.date && <span class="meta">{formatDate(i.date)}</span>}
+          </a>
+        </li>
+      ))
+    }
+  </ul>
+</Base>
+
+<style>
+  .back {
+    text-decoration: none;
+    display: block;
+    width: fit-content;
+    margin-bottom: 1.5rem;
+  }
+  .list {
+    list-style: none;
+    padding-bottom: 60px;
+  }
+  li {
+    border-top: 1px solid var(--line);
+  }
+  a {
+    display: grid;
+    grid-template-columns: 110px 1fr auto;
+    gap: 1rem;
+    align-items: baseline;
+    padding: 1.1rem 0;
+    text-decoration: none;
+  }
+  .chip {
+    justify-self: start;
+  }
+  .t {
+    display: flex;
+    flex-direction: column;
+  }
+  strong {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+  .d {
+    color: var(--ink-soft);
+    font-size: 0.93rem;
+  }
+  @media (max-width: 640px) {
+    a {
+      grid-template-columns: 1fr;
+      gap: 0.3rem;
+    }
+  }
+</style>

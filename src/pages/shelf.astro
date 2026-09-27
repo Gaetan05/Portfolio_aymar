@@ -1,0 +1,117 @@
+---
+import Base from '../layouts/Base.astro';
+import FilterBar from '../components/FilterBar.astro';
+import { getShelf, formatDate } from '../lib/content';
+
+const items = await getShelf();
+const kindNames: Record<string, string> = {
+  book: 'Books', film: 'Films', series: 'Series', podcast: 'Podcasts', music: 'Music', game: 'Games',
+  tool: 'Tools', article: 'Articles', place: 'Places', course: 'Courses', other: 'Other',
+};
+const kinds = Object.keys(kindNames)
+  .map((k) => ({ key: k, label: kindNames[k], count: items.filter((i) => i.data.kind === k).length }))
+  .filter((k) => k.count > 0);
+const statusOpts = [
+  { key: 'favorite', label: '★ Favorites', count: items.filter((i) => i.data.favorite).length },
+  { key: 'in-progress', label: 'In progress', count: items.filter((i) => i.data.status === 'in-progress').length },
+  { key: 'wishlist', label: 'Wishlist', count: items.filter((i) => i.data.status === 'wishlist').length },
+].filter((o) => o.count > 0);
+const statusText = { wishlist: 'On the list', 'in-progress': 'In progress', done: 'Done' } as const;
+---
+
+<Base title="Shelf" description="Books, films, podcasts, tools, places and other discoveries I recommend.">
+  <section class="wrap page-head">
+    <p class="eyebrow">Discoveries</p>
+    <h1>The Shelf</h1>
+    <p class="lede">A living catalogue of books, films, podcasts, tools, places and other discoveries — what I loved, what I’m into now, and what’s next.</p>
+  </section>
+  <section class="wrap" id="shelf">
+    <FilterBar target="#shelf" options={[...statusOpts, ...kinds]} />
+    <div class="shelf">
+      {items.map((s) => {
+        const d = s.data;
+        const keys = [d.kind, d.status, ...(d.favorite ? ['favorite'] : []), ...d.tags].join('|');
+        return (
+          <article class:list={['item card reveal', d.kind]} id={s.id} data-filter-item data-filter-keys={keys}>
+            <header>
+              <span class="meta kind">{d.kind}</span>
+              {d.favorite && <span class="fav" title="Favorite">★</span>}
+            </header>
+            <h2>{d.url ? <a href={d.url} target="_blank" rel="noopener">{d.title}</a> : d.title}</h2>
+            {d.creator && <p class="by">{d.creator}</p>}
+            {d.note && <p class="note">“{d.note}”</p>}
+            <footer class="meta">
+              {d.rating !== undefined && <span class="stars" aria-label={`${d.rating} out of 5`}>{'●'.repeat(Math.round(d.rating))}<span class="off">{'●'.repeat(5 - Math.round(d.rating))}</span></span>}
+              <span>{statusText[d.status]}{d.date && ` · ${formatDate(d.date, { year: 'numeric', month: 'short' })}`}</span>
+            </footer>
+          </article>
+        );
+      })}
+    </div>
+  </section>
+</Base>
+
+<style>
+  .shelf {
+    columns: 3 280px;
+    column-gap: 1.1rem;
+    padding-bottom: 40px;
+  }
+  .item {
+    break-inside: avoid;
+    margin-bottom: 1.1rem;
+    padding: 1.3rem 1.3rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .item:target {
+    outline: 2px solid var(--accent);
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+  }
+  .kind {
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 0.68rem;
+  }
+  .fav {
+    color: var(--accent);
+  }
+  h2 {
+    font-size: 1.3rem;
+    margin: 0;
+  }
+  h2 a {
+    text-decoration: none;
+  }
+  .by {
+    margin: 0;
+    color: var(--ink-mute);
+    font-size: 0.9rem;
+  }
+  .note {
+    font-family: var(--font-display);
+    font-style: italic;
+    color: var(--ink-soft);
+    margin: 0.5rem 0 0;
+    line-height: 1.5;
+  }
+  footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 0.8rem;
+    padding-top: 0.7rem;
+    border-top: 1px dashed var(--line);
+  }
+  .stars {
+    color: var(--accent);
+    letter-spacing: 0.1em;
+  }
+  .stars .off {
+    color: var(--line);
+  }
+</style>

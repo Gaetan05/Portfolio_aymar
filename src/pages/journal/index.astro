@@ -1,0 +1,69 @@
+---
+import Base from '../../layouts/Base.astro';
+import JournalItem from '../../components/JournalItem.astro';
+import FilterBar from '../../components/FilterBar.astro';
+import { getJournal, kindLabel, url } from '../../lib/content';
+
+const entries = await getJournal();
+const kinds = (Object.keys(kindLabel) as (keyof typeof kindLabel)[])
+  .map((k) => ({ key: k, label: kindLabel[k], count: entries.filter((e) => e.data.kind === k).length }))
+  .filter((o) => o.count > 0);
+
+const byYear = new Map<number, typeof entries>();
+entries.forEach((e) => {
+  const y = e.data.date.getUTCFullYear();
+  byYear.set(y, [...(byYear.get(y) ?? []), e]);
+});
+---
+
+<Base title="Journal" description="Essays, notes, discoveries and things I learned — written in public.">
+  <section class="wrap page-head">
+    <p class="eyebrow">Learning in public</p>
+    <h1>Journal</h1>
+    <p class="lede">
+      Essays, quick notes, discoveries and “today I learned” moments. A running log of what catches my attention. Subscribe via <a
+        href={url('rss.xml')}>RSS</a
+      >.
+    </p>
+  </section>
+  <section class="wrap" id="journal-list">
+    <FilterBar target="#journal-list" options={kinds} />
+    {
+      [...byYear].map(([year, list]) => (
+        <div class="year" data-filter-group>
+          <h2 class="y">{year}</h2>
+          <ul>
+            {list.map((e) => (
+              <JournalItem entry={e} />
+            ))}
+          </ul>
+        </div>
+      ))
+    }
+  </section>
+</Base>
+
+<style>
+  .year {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .y {
+    font-size: 1.1rem;
+    font-family: var(--font-mono);
+    color: var(--ink-mute);
+    padding-top: 1.6rem;
+    margin: 0;
+  }
+  ul {
+    margin: 0;
+    padding: 0;
+  }
+  @media (max-width: 760px) {
+    .year {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

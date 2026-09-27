@@ -1,0 +1,60 @@
+# ─────────────────────────────────────────────────────────────
+#  THE SHELF — books, films, tools, places & other discoveries.
+#  Add an item by copying a block below. `id` must be unique.
+#  kind:   book | film | series | podcast | music | game | tool | article | place | course | other
+#  status: wishlist | in-progress | done
+#  rating: 1 – 5 (optional)
+# ─────────────────────────────────────────────────────────────
+
+- id: atomic-habits
+  title: Atomic Habits
+  kind: book
+  creator: James Clear
+  status: done
+  rating: 4
+  date: 2026-05-01
+  note: Systems beat goals. Make the good thing easy and the bad thing hard.
+  tags: [habits, learning]
+  favorite: true
+
+- id: deep-work
+  title: Deep Work
+  kind: book
+  creator: Cal Newport
+  status: in-progress
+  date: 2026-09-01
+  note: Protecting focus is a competitive advantage.
+  tags: [productivity]
+
+- id: interstellar
+  title: Interstellar
+  kind: film
+  creator: Christopher Nolan
+  status: done
+  rating: 5
+  date: 2025-12-20
+  note: Love and gravity, both crossing dimensions.
+  favorite: true
+  tags: [science]
+
+- id: obsidian
+  title: Obsidian
+  kind: tool
+  url: https://obsidian.md
+  status: done
+  rating: 4
+  note: Plain-text notes that link to each other. My second brain.
+  tags: [productivity, writing]
+
+- id: huberman
+  title: Example podcast
+  kind: podcast
+  status: wishlist
+  note: ✏️ Replace me with a podcast you love.
+
+- id: kyoto
+  title: Kyoto
+  kind: place
+  status: wishlist
+  note: Temples, gardens and slow mornings — top of the travel list.
+  tags: [travel, places]

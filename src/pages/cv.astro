@@ -1,0 +1,228 @@
+---
+import Base from '../layouts/Base.astro';
+import { site } from '../site.config';
+import { getExperience, getProjects, formatRange, url } from '../lib/content';
+
+const experience = await getExperience();
+const projects = (await getProjects()).filter((p) => p.data.featured).slice(0, 4);
+const groups = [
+  { title: 'Experience', items: experience.filter((e) => e.data.kind === 'work') },
+  { title: 'Education', items: experience.filter((e) => e.data.kind === 'education') },
+  { title: 'Certifications', items: experience.filter((e) => e.data.kind === 'certification') },
+  { title: 'Volunteering', items: experience.filter((e) => e.data.kind === 'volunteer') },
+  { title: 'Awards', items: experience.filter((e) => e.data.kind === 'award') },
+].filter((g) => g.items.length);
+const host = Astro.site ? new URL(url(), Astro.site).href.replace(/^https?:\/\//, '').replace(/\/$/, '') : '';
+---
+
+<Base title="CV" description={`Curriculum vitae of ${site.name}.`}>
+  <div class="wrap toolbar no-print">
+    <p class="meta">This CV is generated from the same content as the rest of the site — always up to date.</p>
+    <button class="btn" type="button" onclick="window.print()">Download as PDF</button>
+  </div>
+  <article class="cv wrap">
+    <header>
+      <div>
+        <h1>{site.name}</h1>
+        <p class="headline">{site.headline}</p>
+      </div>
+      <ul class="contact">
+        {site.email && <li><a href={`mailto:${site.email}`}>{site.email}</a></li>}
+        {site.location && <li>{site.location}</li>}
+        {host && <li><a href={url()}>{host}</a></li>}
+        {site.socials.filter((s) => s.url.startsWith('http')).map((s) => <li><a href={s.url}>{s.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}</a></li>)}
+      </ul>
+    </header>
+
+    <section>
+      <h2>Profile</h2>
+      <p>{site.intro}</p>
+    </section>
+
+    {groups.map((g) => (
+      <section>
+        <h2>{g.title}</h2>
+        {g.items.map((e) => (
+          <div class="row">
+            <div class="when">{formatRange(e.data.start, e.data.end)}</div>
+            <div>
+              <h3>{e.data.role} <span class="org">— {e.data.org}</span></h3>
+              {e.data.location && <p class="loc">{e.data.location}</p>}
+              {e.data.summary && <p>{e.data.summary}</p>}
+              {e.data.highlights.length > 0 && <ul>{e.data.highlights.map((h) => <li>{h}</li>)}</ul>}
+            </div>
+          </div>
+        ))}
+      </section>
+    ))}
+
+    {projects.length > 0 && (
+      <section>
+        <h2>Selected projects</h2>
+        {projects.map((p) => (
+          <div class="row">
+            <div class="when">{p.data.date.getUTCFullYear()}</div>
+            <div>
+              <h3>{p.data.title}</h3>
+              <p>{p.data.summary}</p>
+            </div>
+          </div>
+        ))}
+      </section>
+    )}
+
+    <section class="two">
+      <div>
+        <h2>Skills</h2>
+        {site.skills.map((g) => <p><strong>{g.group}:</strong> {g.items.join(', ')}</p>)}
+      </div>
+      {site.languages.length > 0 && (
+        <div>
+          <h2>Languages</h2>
+          {site.languages.map((l) => <p><strong>{l.name}</strong> — {l.level}</p>)}
+        </div>
+      )}
+    </section>
+  </article>
+</Base>
+
+<style>
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding-top: 2.5rem;
+  }
+  .toolbar p {
+    margin: 0;
+  }
+  .cv {
+    max-width: 880px;
+    margin-block: 2rem 4rem;
+    padding: clamp(24px, 5vw, 56px);
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+  header {
+    display: flex;
+    justify-content: space-between;
+    gap: 2rem;
+    flex-wrap: wrap;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid var(--ink);
+  }
+  h1 {
+    font-size: clamp(2rem, 5vw, 2.8rem);
+    margin: 0;
+  }
+  .headline {
+    color: var(--accent);
+    font-weight: 500;
+    margin: 0.3rem 0 0;
+  }
+  .contact {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    text-align: right;
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+  }
+  .contact a {
+    text-decoration: none;
+  }
+  section {
+    margin-top: 1.8rem;
+  }
+  h2 {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--ink-mute);
+    font-weight: 500;
+    margin-bottom: 0.8rem;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 1.2rem;
+    padding: 0.6rem 0;
+    break-inside: avoid;
+  }
+  .when {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--ink-mute);
+    padding-top: 0.2rem;
+  }
+  h3 {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 0.2rem;
+    letter-spacing: 0;
+  }
+  .org {
+    font-weight: 400;
+    color: var(--ink-soft);
+  }
+  .loc {
+    font-size: 0.82rem;
+    color: var(--ink-mute);
+    margin: 0 0 0.3rem;
+  }
+  .row p {
+    margin: 0 0 0.3rem;
+  }
+  ul {
+    margin: 0.3rem 0 0;
+    padding-left: 1.1em;
+  }
+  .two {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 2rem;
+  }
+  .two p {
+    margin: 0 0 0.35rem;
+  }
+  @media (max-width: 640px) {
+    .row,
+    .two {
+      grid-template-columns: 1fr;
+      gap: 0.2rem;
+    }
+    .contact {
+      text-align: left;
+    }
+  }
+  @media print {
+    @page {
+      margin: 14mm;
+    }
+    :global(body) {
+      background: #fff;
+      color: #000;
+    }
+    :global(.site-header),
+    :global(.site-footer) {
+      display: none !important;
+    }
+    .cv {
+      border: 0;
+      box-shadow: none;
+      padding: 0;
+      margin: 0;
+      max-width: none;
+      background: #fff;
+      font-size: 10.5pt;
+    }
+  }
+</style>

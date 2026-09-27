@@ -1,0 +1,127 @@
+---
+import { render, type CollectionEntry } from 'astro:content';
+import { formatRange } from '../lib/content';
+
+interface Props {
+  items: CollectionEntry<'experience'>[];
+}
+const { items } = Astro.props;
+const rendered = await Promise.all(items.map(async (e) => ({ e, Content: (await render(e)).Content })));
+---
+
+<ol class="timeline">
+  {
+    rendered.map(({ e, Content }) => (
+      <li class="reveal">
+        <div class="when meta">
+          {formatRange(e.data.start, e.data.end)}
+          {!e.data.end && <span class="now">Now</span>}
+        </div>
+        <div class="what">
+          <h3>{e.data.role}</h3>
+          <p class="org">
+            {e.data.orgUrl ? (
+              <a href={e.data.orgUrl} target="_blank" rel="noopener">
+                {e.data.org}
+              </a>
+            ) : (
+              e.data.org
+            )}
+            {e.data.location && <span class="meta"> · {e.data.location}</span>}
+          </p>
+          {e.data.summary && <p class="summary">{e.data.summary}</p>}
+          {e.data.highlights.length > 0 && (
+            <ul>
+              {e.data.highlights.map((h) => (
+                <li>{h}</li>
+              ))}
+            </ul>
+          )}
+          {e.body?.trim() && (
+            <div class="prose extra">
+              <Content />
+            </div>
+          )}
+          {e.data.tags.length > 0 && (
+            <div class="chips">
+              {e.data.tags.map((t) => (
+                <span class="chip">{t}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      </li>
+    ))
+  }
+</ol>
+
+<style>
+  .timeline {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    position: relative;
+  }
+  li {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 2rem;
+    padding: 1.6rem 0;
+    border-top: 1px solid var(--line);
+  }
+  .when {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-start;
+    padding-top: 0.35rem;
+  }
+  .now {
+    color: var(--ok);
+    font-size: 0.7rem;
+    border: 1px solid currentColor;
+    padding: 0.15em 0.55em;
+    border-radius: 999px;
+  }
+  h3 {
+    margin: 0;
+  }
+  .org {
+    margin: 0.25rem 0 0.6rem;
+    color: var(--accent);
+    font-weight: 500;
+  }
+  .org a {
+    text-decoration: none;
+  }
+  .summary {
+    color: var(--ink-soft);
+  }
+  ul {
+    padding-left: 1.1em;
+    margin: 0 0 1rem;
+    color: var(--ink-soft);
+  }
+  ul li {
+    display: list-item;
+    padding: 0.15em 0;
+    border: 0;
+  }
+  ul li::marker {
+    color: var(--accent);
+  }
+  .extra {
+    margin-bottom: 1rem;
+    font-size: 0.98rem;
+  }
+  @media (max-width: 700px) {
+    li {
+      grid-template-columns: 1fr;
+      gap: 0.4rem;
+    }
+    .when {
+      flex-direction: row;
+      align-items: center;
+    }
+  }
+</style>

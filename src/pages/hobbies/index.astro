@@ -1,0 +1,81 @@
+---
+import Base from '../../layouts/Base.astro';
+import { getHobbies, url } from '../../lib/content';
+const hobbies = await getHobbies();
+---
+
+<Base title="Hobbies" description="What I do for the love of it.">
+  <section class="wrap page-head">
+    <p class="eyebrow">For the love of it</p>
+    <h1>Hobbies</h1>
+    <p class="lede">The things I do when nobody’s paying me — and that quietly make me better at the things they do.</p>
+  </section>
+  <section class="wrap list">
+    {
+      hobbies.map((h, i) => (
+        <a class="row reveal" href={url(`hobbies/${h.id}`)}>
+          <span class="num meta">{String(i + 1).padStart(2, '0')}</span>
+          <span class="icon">{h.data.icon}</span>
+          <span class="txt">
+            <h2>{h.data.title}</h2>
+            <p>{h.data.summary}</p>
+          </span>
+          {h.data.since && <span class="meta since">since {h.data.since}</span>}
+        </a>
+      ))
+    }
+  </section>
+</Base>
+
+<style>
+  .list {
+    padding-bottom: 60px;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 48px 72px 1fr auto;
+    align-items: center;
+    gap: 1.2rem;
+    padding: 1.8rem 0.5rem;
+    border-top: 1px solid var(--line);
+    text-decoration: none;
+    transition: padding 0.3s, background 0.3s;
+    border-radius: 14px;
+  }
+  .row:last-child {
+    border-bottom: 1px solid var(--line);
+  }
+  .row:hover {
+    color: var(--ink);
+    background: var(--bg-elev);
+    padding-inline: 1.5rem;
+  }
+  .row:hover h2 {
+    color: var(--accent);
+    font-style: italic;
+  }
+  .icon {
+    font-size: 2.6rem;
+    transition: transform 0.3s;
+  }
+  .row:hover .icon {
+    transform: scale(1.15) rotate(-8deg);
+  }
+  h2 {
+    margin: 0 0 0.2rem;
+    transition: color 0.2s;
+  }
+  p {
+    margin: 0;
+    color: var(--ink-soft);
+  }
+  @media (max-width: 640px) {
+    .row {
+      grid-template-columns: 52px 1fr;
+    }
+    .num,
+    .since {
+      display: none;
+    }
+  }
+</style>

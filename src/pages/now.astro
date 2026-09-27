@@ -1,0 +1,79 @@
+---
+import { render } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import { getNow, formatDate } from '../lib/content';
+
+const entries = await getNow();
+const rendered = await Promise.all(entries.map(async (e) => ({ e, Content: (await render(e)).Content })));
+const [current, ...archive] = rendered;
+---
+
+<Base title="Now" description="What I'm focused on at this point in my life.">
+  <section class="wrap page-head">
+    <p class="eyebrow">A /now page</p>
+    <h1>What I’m doing now</h1>
+    <p class="lede">
+      What I’d tell a friend I hadn’t seen in a year. Inspired by <a href="https://nownownow.com/about" target="_blank" rel="noopener"
+        >nownownow.com</a
+      >. Older snapshots are kept below — a small diary of where my head has been.
+    </p>
+  </section>
+  {
+    current && (
+      <section class="wrap current">
+        <p class="meta">
+          Updated {formatDate(current.e.data.date, { year: 'numeric', month: 'long', day: 'numeric' })}
+          {current.e.data.location && ` · 📍 ${current.e.data.location}`}
+        </p>
+        <div class="prose">
+          <current.Content />
+        </div>
+      </section>
+    )
+  }
+  {
+    archive.length > 0 && (
+      <section class="wrap section">
+        <p class="eyebrow">Previously</p>
+        <h2>Past snapshots</h2>
+        {archive.map(({ e, Content }) => (
+          <details class="snap card">
+            <summary>
+              <strong>{formatDate(e.data.date, { year: 'numeric', month: 'long' })}</strong>
+              {e.data.location && <span class="meta">{e.data.location}</span>}
+            </summary>
+            <div class="prose">
+              <Content />
+            </div>
+          </details>
+        ))}
+      </section>
+    )
+  }
+</Base>
+
+<style>
+  .current {
+    padding-bottom: 20px;
+  }
+  .current .prose {
+    margin-top: 1.5rem;
+  }
+  .snap {
+    margin-top: 1rem;
+    padding: 1.1rem 1.4rem;
+  }
+  summary {
+    cursor: pointer;
+    display: flex;
+    gap: 1rem;
+    align-items: baseline;
+  }
+  summary strong {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+  }
+  .snap .prose {
+    margin-top: 1rem;
+  }
+</style>

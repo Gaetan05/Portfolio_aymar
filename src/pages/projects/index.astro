@@ -1,0 +1,29 @@
+---
+import Base from '../../layouts/Base.astro';
+import ProjectCard from '../../components/ProjectCard.astro';
+import FilterBar from '../../components/FilterBar.astro';
+import { getProjects, statusLabel } from '../../lib/content';
+
+const projects = await getProjects();
+const count = (fn: (p: (typeof projects)[number]) => boolean) => projects.filter(fn).length;
+const statuses = (Object.keys(statusLabel) as (keyof typeof statusLabel)[])
+  .map((s) => ({ key: s, label: statusLabel[s], count: count((p) => p.data.status === s) }))
+  .filter((o) => o.count > 0);
+const stackCounts = new Map<string, number>();
+projects.forEach((p) => p.data.stack.forEach((s) => stackCounts.set(s, (stackCounts.get(s) ?? 0) + 1)));
+const stacks = [...stackCounts].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([key, n]) => ({ key, label: key, count: n }));
+---
+
+<Base title="Projects" description="Things I've built, shipped, explored and sometimes abandoned.">
+  <section class="wrap page-head">
+    <p class="eyebrow">Work & side projects</p>
+    <h1>Projects</h1>
+    <p class="lede">Things I’ve built, shipped, explored — and sometimes abandoned. Each one taught me something.</p>
+  </section>
+  <section class="wrap" id="project-grid">
+    <FilterBar target="#project-grid" options={[...statuses, ...stacks]} />
+    <div class="grid">
+      {projects.map((p) => <ProjectCard project={p} />)}
+    </div>
+  </section>
+</Base>

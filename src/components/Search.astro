@@ -1,0 +1,201 @@
+---
+import { url } from '../lib/content';
+---
+
+<dialog id="search" class="search no-print" data-index={url('search.json')} aria-label="Search the site">
+  <div class="panel">
+    <div class="field">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        ><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg
+      >
+      <input type="search" placeholder="Search projects, notes, hobbies, books…" autocomplete="off" spellcheck="false" />
+      <kbd>esc</kbd>
+    </div>
+    <ul class="results" role="listbox"></ul>
+    <p class="hint meta">Type to search · ↑ ↓ to move · ↵ to open</p>
+  </div>
+</dialog>
+
+<script>
+  type Doc = { title: string; href: string; kind: string; text: string; tags: string[] };
+
+  const dialog = document.getElementById('search') as HTMLDialogElement;
+  const input = dialog.querySelector('input')!;
+  const list = dialog.querySelector('.results')!;
+  let docs: Doc[] | null = null;
+  let active = 0;
+
+  async function load() {
+    if (docs) return docs;
+    const res = await fetch(dialog.dataset.index!);
+    docs = (await res.json()) as Doc[];
+    return docs;
+  }
+
+  const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+
+  function score(d: Doc, terms: string[]) {
+    const title = norm(d.title);
+    const tags = norm(d.tags.join(' '));
+    const text = norm(d.text);
+    let s = 0;
+    for (const t of terms) {
+      if (title.startsWith(t)) s += 12;
+      else if (title.includes(t)) s += 8;
+      else if (tags.includes(t)) s += 5;
+      else if (text.includes(t)) s += 2;
+      else return 0;
+    }
+    return s;
+  }
+
+  async function run() {
+    const q = norm(input.value.trim());
+    const all = await load();
+    const terms = q.split(/\s+/).filter(Boolean);
+    const hits = terms.length
+      ? all
+          .map((d) => ({ d, s: score(d, terms) }))
+          .filter((x) => x.s > 0)
+          .sort((a, b) => b.s - a.s)
+          .slice(0, 12)
+          .map((x) => x.d)
+      : all.slice(0, 8);
+    active = 0;
+    list.innerHTML = hits.length
+      ? hits
+          .map(
+            (d, i) =>
+              `<li role="option" aria-selected="${i === 0}"><a href="${d.href}"><span class="k">${esc(d.kind)}</span><span class="t">${esc(d.title)}</span></a></li>`,
+          )
+          .join('')
+      : `<li class="empty">Nothing found for “${esc(input.value)}”.</li>`;
+  }
+
+  function move(delta: number) {
+    const items = [...list.querySelectorAll('li[role="option"]')];
+    if (!items.length) return;
+    items[active]?.setAttribute('aria-selected', 'false');
+    active = (active + delta + items.length) % items.length;
+    items[active].setAttribute('aria-selected', 'true');
+    items[active].scrollIntoView({ block: 'nearest' });
+  }
+
+  function open() {
+    if (dialog.open) return;
+    dialog.showModal();
+    input.value = '';
+    run();
+    input.focus();
+  }
+
+  document.querySelectorAll('[data-open-search]').forEach((b) => b.addEventListener('click', open));
+  document.addEventListener('keydown', (e) => {
+    const typing = /INPUT|TEXTAREA|SELECT/.test((e.target as HTMLElement).tagName);
+    if ((e.key === 'k' && (e.metaKey || e.ctrlKey)) || (e.key === '/' && !typing)) {
+      e.preventDefault();
+      open();
+    }
+  });
+  input.addEventListener('input', run);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') (e.preventDefault(), move(1));
+    if (e.key === 'ArrowUp') (e.preventDefault(), move(-1));
+    if (e.key === 'Enter') {
+      const a = list.querySelector<HTMLAnchorElement>('li[aria-selected="true"] a');
+      if (a) window.location.href = a.href;
+    }
+  });
+  dialog.addEventListener('click', (e) => {
+    if (e.target === dialog) dialog.close();
+  });
+</script>
+
+<style>
+  .search {
+    width: min(640px, calc(100vw - 32px));
+    max-height: min(70vh, 560px);
+    margin: 12vh auto auto;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--bg-elev);
+    color: var(--ink);
+    box-shadow: 0 30px 80px -20px rgb(0 0 0 / 0.45);
+    overflow: hidden;
+  }
+  .search::backdrop {
+    background: rgb(10 10 12 / 0.45);
+    backdrop-filter: blur(4px);
+  }
+  .panel {
+    display: flex;
+    flex-direction: column;
+    max-height: inherit;
+  }
+  .field {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.2rem;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink-mute);
+  }
+  input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--ink);
+    font: 1.05rem var(--font-body);
+  }
+  input::-webkit-search-cancel-button {
+    display: none;
+  }
+  kbd {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 0.2em 0.45em;
+  }
+  .results {
+    list-style: none;
+    margin: 0;
+    padding: 0.5rem;
+    overflow-y: auto;
+  }
+  .results :global(a) {
+    display: flex;
+    gap: 0.9rem;
+    align-items: baseline;
+    padding: 0.7rem 0.8rem;
+    border-radius: 10px;
+    text-decoration: none;
+  }
+  .results :global(li[aria-selected='true'] a),
+  .results :global(a:hover) {
+    background: var(--accent-soft);
+    color: var(--ink);
+  }
+  .results :global(.k) {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    min-width: 78px;
+  }
+  .results :global(.empty) {
+    padding: 1.5rem;
+    color: var(--ink-mute);
+    text-align: center;
+  }
+  .hint {
+    margin: 0;
+    padding: 0.7rem 1.2rem;
+    border-top: 1px solid var(--line);
+  }
+</style>
