@@ -1,10 +1,26 @@
 ---
 import { render } from 'astro:content';
 import Base from '../layouts/Base.astro';
-import ProjectCard from '../components/ProjectCard.astro';
-import JournalItem from '../components/JournalItem.astro';
+import HeroMap from '../components/HeroMap.astro';
+import Marquee from '../components/Marquee.astro';
+import Cover from '../components/Cover.astro';
+import Ledge from '../components/Ledge.astro';
 import { site } from '../site.config';
-import { url, getProjects, getJournal, getHobbies, getShelf, getNow, getExperience, formatDate } from '../lib/content';
+import {
+  url,
+  richWords,
+  hash,
+  getProjects,
+  getJournal,
+  getHobbies,
+  getShelf,
+  getNow,
+  getExperience,
+  formatDate,
+  kindLabel,
+  statusLabel,
+  readingTime,
+} from '../lib/content';
 
 const [projects, journal, hobbies, shelf, now, experience] = await Promise.all([
   getProjects(),
@@ -15,171 +31,253 @@ const [projects, journal, hobbies, shelf, now, experience] = await Promise.all([
   getExperience(),
 ]);
 
-const featured = (projects.filter((p) => p.data.featured).length ? projects.filter((p) => p.data.featured) : projects).slice(0, 3);
-const latest = journal.slice(0, 4);
+const featuredRaw = projects.filter((p) => p.data.featured);
+const featured = (featuredRaw.length ? featuredRaw : projects).slice(0, 5);
+const [lead, ...moreJournal] = journal;
 const currentNow = now[0];
 const NowContent = currentNow ? (await render(currentNow)).Content : null;
 const current = experience.find((e) => !e.data.end && e.data.kind === 'work');
-const picks = shelf.filter((s) => s.data.favorite || s.data.status === 'in-progress').slice(0, 6);
 const discoveries = journal.filter((j) => j.data.kind === 'discovery' || j.data.kind === 'til').length;
+const [firstName, ...lastParts] = site.name.split(' ');
+const lastName = lastParts.join(' ');
 
 const stats = [
-  { n: projects.length, label: 'Projects', href: 'projects' },
+  { n: projects.length, label: 'Projects made', href: 'projects' },
   { n: journal.length, label: 'Journal entries', href: 'journal' },
   { n: discoveries, label: 'Discoveries & TILs', href: 'journal?filter=discovery' },
   { n: shelf.length, label: 'Things on the shelf', href: 'shelf' },
 ];
+
+// Hobby stickers: deterministic scatter
+const STICKER = [
+  ['var(--signal)', '#0f0f0d'],
+  ['#c9b8ff', '#0f0f0d'],
+  ['#ff5b24', '#0f0f0d'],
+  ['#2d3cff', '#ebe7dd'],
+  ['#ebe7dd', '#0f0f0d'],
+  ['#1e3b2f', '#d4ff3a'],
+];
+const deskRowsCount = Math.max(1, Math.ceil(hobbies.length / 4));
+const stickers = hobbies.map((h, i) => {
+  const s = hash(h.id);
+  const cols = Math.min(hobbies.length, 4);
+  const col = i % cols;
+  const row = Math.floor(i / cols);
+  return {
+    h,
+    left: 4 + col * (88 / cols) + ((s % 7) - 3),
+    top: (row * 100) / deskRowsCount + 6 + ((s >> 3) % Math.round(40 / deskRowsCount)),
+    rot: ((s >> 5) % 17) - 8,
+    colors: STICKER[i % STICKER.length],
+  };
+});
+
+const shelfPicks = shelf.slice(0, 14);
 ---
 
-<Base>
-  <!-- ───── Hero ───── -->
-  <section class="hero wrap">
-    <div class="hero-text">
-      {
-        site.availability.open && (
-          <p class="badge">
-            <span class="dot" />
-            {site.availability.label}
-          </p>
-        )
-      }
-      <h1>
-        Hi, I’m {site.name.split(' ')[0]}.<br />
-        I <span class="rotator" data-words={JSON.stringify(site.heroVerbs)}>{site.heroVerbs[0]}</span><span class="caret">.</span>
+<Base preloader>
+  <!-- ═════════ HERO ═════════ -->
+  <section class="hero">
+    <HeroMap />
+    <div class="hero-inner pad">
+      <div class="hero-top grid12">
+        <p class="label ht-1" data-intro><span class="num">00</span> Index of a curious life</p>
+        <p class="mono ht-2" data-intro>
+          {site.headline}
+        </p>
+        {
+          site.availability.open && (
+            <p class="mono ht-3 avail" data-intro>
+              <i />
+              {site.availability.label}
+            </p>
+          )
+        }
+      </div>
+
+      <h1 class="hero-name display" aria-label={site.name}>
+        <span class="hn-1" data-intro="lines">{firstName}</span>
+        <span class="hn-2">
+          <span class="hn-aside" data-intro>
+            <span class="serif">currently I</span>
+            <span class="verbs" aria-live="polite">
+              {site.heroVerbs.map((v, i) => <span class:list={['verb', { on: i === 0 }]}>{v}</span>)}
+            </span>
+          </span>
+          <span data-intro="lines">{lastName}</span>
+        </span>
       </h1>
-      <p class="lede">{site.intro}</p>
-      <div class="cta">
-        <a class="btn" href={url('projects')}>See my work</a>
-        <a class="btn ghost" href={url('about')}>More about me</a>
-        <a class="btn ghost" href={url('cv')}>CV</a>
+
+      <div class="hero-bottom grid12">
+        <p class="hb-intro" data-intro>{site.intro}</p>
+        <div class="hb-meta mono" data-intro>
+          {current && <span>Now — {current.data.role}, {current.data.org}</span>}
+          {site.location && <span>Based — {site.location}</span>}
+        </div>
+        <a href="#manifesto" class="hb-scroll mono" data-intro data-magnetic="0.4">
+          <span class="roll"><span data-t="Scroll">Scroll</span></span>
+          <span class="scroll-line"></span>
+        </a>
       </div>
     </div>
-    <aside class="hero-card card">
-      <p class="eyebrow">Right now</p>
-      <ul class="facts">
-        {
-          current && (
-            <li>
-              <span class="k">Working</span>
-              <span>
-                {current.data.role} @ {current.data.org}
-              </span>
-            </li>
-          )
-        }
-        {site.location && (
-          <li>
-            <span class="k">Based</span>
-            <span>{site.location}</span>
-          </li>
-        )}
-        {
-          journal[0] && (
-            <li>
-              <span class="k">Writing</span>
-              <a href={url(`journal/${journal[0].id}`)}>{journal[0].data.title}</a>
-            </li>
-          )
-        }
-        {
-          shelf.find((s) => s.data.status === 'in-progress') && (
-            <li>
-              <span class="k">Into</span>
-              <span>{shelf.find((s) => s.data.status === 'in-progress')!.data.title}</span>
-            </li>
-          )
-        }
-      </ul>
-      {currentNow && <a class="more-link" href={url('now')}>Updated {formatDate(currentNow.data.date)}</a>}
-    </aside>
   </section>
 
-  <!-- ───── Stats ───── -->
-  <section class="wrap stats">
-    {
-      stats.map((s) => (
-        <a class="stat reveal" href={url(s.href)}>
-          <span class="n">{s.n}</span>
-          <span class="l">{s.label}</span>
-        </a>
-      ))
-    }
+  <!-- ═════════ MANIFESTO ═════════ -->
+  <section class="manifesto pad" id="manifesto">
+    <div class="sec-head">
+      <span class="label"><span class="num">01</span></span>
+      <span class="label">Manifesto</span>
+      <span class="label">Est. {new Date().getFullYear()}</span>
+    </div>
+    <p class="mf-text" data-words set:html={richWords(site.manifesto)} />
+    <div class="stats grid12">
+      {
+        stats.map((s) => (
+          <a class="stat" href={url(s.href)} data-cursor="Open">
+            <span class="stat-n display" data-count>
+              {s.n}
+            </span>
+            <span class="stat-l mono">{s.label} ↗</span>
+          </a>
+        ))
+      }
+    </div>
   </section>
 
-  <!-- ───── Featured projects ───── -->
+  <Marquee items={['Projects', 'Journal', 'Hobbies', 'Discoveries', 'Shelf', 'Now']} variant="ink" speed={50} />
+
+  <!-- ═════════ SELECTED WORK (horizontal) ═════════ -->
   {
     featured.length > 0 && (
-      <section class="section wrap">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">Selected work</p>
-            <h2>Things I’ve made</h2>
+      <section class="work" id="work">
+        <div class="pad">
+          <div class="sec-head">
+            <span class="label">
+              <span class="num">02</span>
+            </span>
+            <span class="label">Selected work</span>
+            <a class="label ulink" href={url('projects')}>
+              All {projects.length} projects ↗
+            </a>
           </div>
-          <a class="more-link" href={url('projects')}>
-            All {projects.length} projects
-          </a>
         </div>
-        <div class="grid">
-          {featured.map((p, i) => (
-            <ProjectCard project={p} large={i === 0} />
-          ))}
+        <div class="work-pin">
+          <div class="work-track pad">
+            <div class="work-intro">
+              <h2 class="display" data-split>
+                Things <br />
+                I’ve <em class="serif">made</em>
+              </h2>
+              <p class="mono work-hint">Drag or scroll →</p>
+            </div>
+            {featured.map((p, i) => (
+              <a class="wcard" href={url(`projects/${p.id}`)} data-cursor="View">
+                <div class="wcard-media">
+                  <Cover seed={p.data.title} accent={p.data.accent} ratio="4 / 3" label={`N°${String(i + 1).padStart(2, '0')}`} />
+                </div>
+                <div class="wcard-meta">
+                  <span class="mono">{p.data.date.getUTCFullYear()}</span>
+                  <span class="mono">{statusLabel[p.data.status]}</span>
+                </div>
+                <h3 class="wcard-title display">{p.data.title}</h3>
+                <p class="wcard-sum">{p.data.summary}</p>
+              </a>
+            ))}
+            <a class="wcard wcard-all" href={url('projects')} data-cursor="All">
+              <span class="display">
+                See
+                <br />
+                every
+                <br />
+                <em class="serif">project</em> ↗
+              </span>
+            </a>
+          </div>
         </div>
       </section>
     )
   }
 
-  <!-- ───── Journal + Now ───── -->
-  <section class="section wrap split">
-    <div>
-      <div class="section-head">
-        <div>
-          <p class="eyebrow">Journal</p>
-          <h2>Notes, essays & discoveries</h2>
-        </div>
-        <a class="more-link" href={url('journal')}>Read all</a>
-      </div>
-      <ul class="journal-list">
-        {latest.map((e) => <JournalItem entry={e} />)}
-      </ul>
-    </div>
-    {
-      currentNow && NowContent && (
-        <aside class="now card reveal">
-          <p class="eyebrow">/now</p>
-          <p class="meta">
-            {formatDate(currentNow.data.date)}
-            {currentNow.data.location && ` · ${currentNow.data.location}`}
-          </p>
-          <div class="prose small">
-            <NowContent />
-          </div>
-          <a class="more-link" href={url('now')}>
-            What I’m up to
+  <!-- ═════════ JOURNAL ═════════ -->
+  {
+    lead && (
+      <section class="journal pad">
+        <div class="sec-head">
+          <span class="label">
+            <span class="num">03</span>
+          </span>
+          <span class="label">Journal — notes, essays & discoveries</span>
+          <a class="label ulink" href={url('journal')}>
+            Read all ↗
           </a>
-        </aside>
-      )
-    }
-  </section>
+        </div>
+        <div class="jr grid12">
+          <a class="jr-lead" href={url(`journal/${lead.id}`)} data-cursor="Read">
+            <div class="jr-cover" data-unveil>
+              <Cover seed={lead.data.title} ratio="16 / 10" pattern={0} />
+            </div>
+            <div class="jr-lead-meta mono">
+              <span class="kind">{kindLabel[lead.data.kind]}</span>
+              <span>{formatDate(lead.data.date)}</span>
+              <span>{readingTime(lead.body)} min read</span>
+            </div>
+            <h3 class="jr-lead-title display" data-split>
+              {lead.data.title}
+            </h3>
+            <p class="jr-lead-desc">{lead.data.description}</p>
+          </a>
+          <ol class="jr-list">
+            {moreJournal.slice(0, 5).map((e) => (
+              <li>
+                <a href={url(`journal/${e.id}`)} class="jr-row" data-cursor="Read">
+                  <span class="mono jr-kind">{kindLabel[e.data.kind]}</span>
+                  <span class="jr-title">{e.data.title}</span>
+                  <span class="mono jr-date">{formatDate(e.data.date, { day: '2-digit', month: 'short' })}</span>
+                </a>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+    )
+  }
 
-  <!-- ───── Hobbies ───── -->
+  <!-- ═════════ HOBBIES (draggable desk) ═════════ -->
   {
     hobbies.length > 0 && (
-      <section class="section wrap">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">Off the clock</p>
-            <h2>Hobbies & obsessions</h2>
-          </div>
-          <a class="more-link" href={url('hobbies')}>
-            Explore
+      <section class="hobbies pad">
+        <div class="sec-head">
+          <span class="label">
+            <span class="num">04</span>
+          </span>
+          <span class="label">Off the clock</span>
+          <a class="label ulink" href={url('hobbies')}>
+            All hobbies ↗
           </a>
         </div>
-        <div class="hobbies">
-          {hobbies.map((h) => (
-            <a class="hobby card reveal" href={url(`hobbies/${h.id}`)}>
-              <span class="icon">{h.data.icon}</span>
-              <h3>{h.data.title}</h3>
-              <p>{h.data.summary}</p>
+        <div class="hb-head grid12">
+          <h2 class="display" data-split>
+            What I do <em class="serif">for love</em>
+          </h2>
+          <p class="mono hb-note">
+            ↳ Go on, move them around.
+            <br />
+            Click one to read more.
+          </p>
+        </div>
+        <div class="desk" style={`--rows:${deskRowsCount}`}>
+          {stickers.map(({ h, left, top, rot, colors }) => (
+            <a
+              class="sticker"
+              href={url(`hobbies/${h.id}`)}
+              style={`left:${left}%;top:${top}%;--rot:${rot}deg;--bg:${colors[0]};--fg:${colors[1]}`}
+              data-cursor="Drag"
+              draggable="false"
+            >
+              <span class="st-icon">{h.data.icon}</span>
+              <span class="st-title display">{h.data.title}</span>
+              <span class="st-sum">{h.data.summary}</span>
+              {h.data.since && <span class="st-since mono">Since {h.data.since}</span>}
             </a>
           ))}
         </div>
@@ -187,27 +285,54 @@ const stats = [
     )
   }
 
-  <!-- ───── Shelf ───── -->
+  <!-- ═════════ SHELF (spines) ═════════ -->
   {
-    picks.length > 0 && (
-      <section class="section wrap">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">The shelf</p>
-            <h2>Books, films, tools & finds I love</h2>
-          </div>
-          <a class="more-link" href={url('shelf')}>
-            Full shelf
+    shelfPicks.length > 0 && (
+      <section class="shelf pad">
+        <div class="sec-head">
+          <span class="label">
+            <span class="num">05</span>
+          </span>
+          <span class="label">The shelf — books, films, tools & finds</span>
+          <a class="label ulink" href={url('shelf')}>
+            Browse the shelf ↗
           </a>
         </div>
-        <div class="picks">
-          {picks.map((s) => (
-            <a class="pick reveal" href={url(`shelf#${s.id}`)}>
-              <span class="meta">{s.data.kind}</span>
-              <strong>{s.data.title}</strong>
-              {s.data.creator && <span class="by">{s.data.creator}</span>}
-            </a>
-          ))}
+        <div class="shelf-grid grid12">
+          <h2 class="display shelf-title" data-split>
+            Borrowed <br />
+            <em class="serif">brilliance</em>
+          </h2>
+          <div class="ledge-wrap">
+            <Ledge items={shelfPicks} more={{ href: url('shelf'), label: `All ${shelf.length} on the shelf` }} />
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  <!-- ═════════ NOW ═════════ -->
+  {
+    currentNow && NowContent && (
+      <section class="now pad">
+        <div class="sec-head">
+          <span class="label">
+            <span class="num">06</span>
+          </span>
+          <span class="label">/now — field notes</span>
+          <a class="label ulink" href={url('now')}>
+            Past snapshots ↗
+          </a>
+        </div>
+        <div class="now-grid grid12">
+          <div class="now-stamp">
+            <span class="display now-day">{String(currentNow.data.date.getUTCDate()).padStart(2, '0')}</span>
+            <span class="mono">{formatDate(currentNow.data.date, { month: 'long', year: 'numeric' })}</span>
+            {currentNow.data.location && <span class="mono muted">📍 {currentNow.data.location}</span>}
+          </div>
+          <div class="prose now-body" data-rise>
+            <NowContent />
+          </div>
         </div>
       </section>
     )
@@ -215,259 +340,724 @@ const stats = [
 </Base>
 
 <script>
-  // Typewriter for the hero verbs
-  const el = document.querySelector<HTMLElement>('.rotator');
-  if (el && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    const words: string[] = JSON.parse(el.dataset.words || '[]');
-    let w = 0;
-    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-    (async () => {
-      while (words.length > 1) {
-        await sleep(2200);
-        for (let i = el.textContent!.length; i >= 0; i--) {
-          el.textContent = words[w].slice(0, i);
-          await sleep(28);
-        }
-        w = (w + 1) % words.length;
-        for (let i = 1; i <= words[w].length; i++) {
-          el.textContent = words[w].slice(0, i);
-          await sleep(55);
-        }
-      }
-    })();
+  import { gsap, ScrollTrigger, reduced, fine } from '../scripts/app';
+  import { Draggable } from 'gsap/Draggable';
+  import { InertiaPlugin } from 'gsap/InertiaPlugin';
+  gsap.registerPlugin(Draggable, InertiaPlugin);
+
+  /* Rotating verbs in the hero */
+  const verbs = [...document.querySelectorAll<HTMLElement>('.verb')];
+  if (verbs.length > 1 && !reduced) {
+    let i = 0;
+    setInterval(() => {
+      const cur = verbs[i];
+      i = (i + 1) % verbs.length;
+      const next = verbs[i];
+      gsap.to(cur, { yPercent: -100, opacity: 0, duration: 0.7, ease: 'expo.in', onComplete: () => cur.classList.remove('on') });
+      next.classList.add('on');
+      gsap.fromTo(next, { yPercent: 100, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.9, ease: 'expo.out', delay: 0.55 });
+    }, 2800);
   }
+
+  /* Hero name drifts apart on scroll */
+  if (!reduced) {
+    gsap.to('.hn-1', { xPercent: -8, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } });
+    gsap.to('.hn-2', { xPercent: 6, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } });
+  }
+
+  /* Horizontal scroll for selected work (desktop) */
+  const mm = gsap.matchMedia();
+  mm.add('(min-width: 901px) and (prefers-reduced-motion: no-preference)', () => {
+    const track = document.querySelector<HTMLElement>('.work-track');
+    const pin = document.querySelector<HTMLElement>('.work-pin');
+    if (!track || !pin) return;
+    const dist = () => track.scrollWidth - window.innerWidth;
+    const tween = gsap.to(track, {
+      x: () => -dist(),
+      ease: 'none',
+      scrollTrigger: { trigger: pin, start: 'top top', end: () => `+=${dist()}`, pin: true, scrub: 0.8, invalidateOnRefresh: true, anticipatePin: 1 },
+    });
+    // Covers counter-parallax inside cards
+    gsap.utils.toArray<HTMLElement>('.wcard-media .cover').forEach((c) => {
+      gsap.fromTo(
+        c,
+        { xPercent: -8, scale: 1.18 },
+        { xPercent: 8, scale: 1.18, ease: 'none', scrollTrigger: { trigger: c, containerAnimation: tween, start: 'left right', end: 'right left', scrub: true } },
+      );
+    });
+  });
+
+  /* Draggable stickers (desktop) */
+  mm.add('(min-width: 901px)', () => {
+    const desk = document.querySelector<HTMLElement>('.desk');
+    if (!desk || !fine) return;
+    let z = 10;
+    const ds = Draggable.create('.sticker', {
+      bounds: desk,
+      inertia: true,
+      edgeResistance: 0.8,
+      minimumMovement: 6,
+      onPress() {
+        this.target.style.zIndex = String(++z);
+        gsap.to(this.target, { scale: 1.06, rotate: 0, duration: 0.4, ease: 'back.out(2)' });
+      },
+      onRelease() {
+        gsap.to(this.target, { scale: 1, rotate: gsap.utils.random(-7, 7), duration: 0.8, ease: 'elastic.out(1, 0.5)' });
+      },
+      onClick() {
+        window.location.href = (this.target as HTMLAnchorElement).href;
+      },
+    });
+    // Prevent native link navigation after a drag
+    document.querySelectorAll('.sticker').forEach((s) => s.addEventListener('click', (e) => e.preventDefault()));
+    return () => ds.forEach((d) => d.kill());
+  });
+
+  /* Stickers drop onto the desk */
+  if (!reduced) {
+    gsap.from('.sticker', {
+      y: -120,
+      opacity: 0,
+      rotate: () => gsap.utils.random(-30, 30),
+      duration: 1.2,
+      stagger: 0.1,
+      ease: 'bounce.out',
+      scrollTrigger: { trigger: '.desk', start: 'top 75%', once: true },
+    });
+    gsap.from('.spine', {
+      yPercent: 105,
+      duration: 1.1,
+      stagger: 0.04,
+      ease: 'expo.out',
+      scrollTrigger: { trigger: '.ledge', start: 'top 80%', once: true },
+    });
+  }
+  ScrollTrigger.refresh();
 </script>
 
 <style>
+  /* ─── Hero ─── */
   .hero {
-    display: grid;
-    grid-template-columns: 1.6fr 1fr;
-    gap: clamp(2rem, 5vw, 4rem);
-    align-items: end;
-    padding-top: clamp(56px, 10vw, 130px);
-    padding-bottom: clamp(40px, 6vw, 72px);
+    position: relative;
+    min-height: 100svh;
+    overflow: hidden;
+    display: flex;
   }
-  .badge {
+  .hero-inner {
+    position: relative;
+    z-index: 2;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding-top: calc(var(--header-h) + 12px);
+    padding-bottom: 20px;
+    pointer-events: none;
+  }
+  .hero-inner a {
+    pointer-events: auto;
+  }
+  .hero-top {
+    padding-top: 10px;
+    border-top: 1px solid var(--rule-strong);
+  }
+  .ht-1 {
+    grid-column: 1 / span 3;
+  }
+  .ht-2 {
+    grid-column: 4 / span 4;
+  }
+  .ht-3 {
+    grid-column: 9 / -1;
+    justify-self: end;
+  }
+  .avail {
     display: inline-flex;
     align-items: center;
-    gap: 0.55rem;
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    padding: 0.45em 0.9em;
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    background: var(--bg-elev);
-    color: var(--ink-soft);
-    margin-bottom: 1.6rem;
+    gap: 0.6em;
   }
-  .dot {
-    width: 8px;
-    height: 8px;
+  .avail i {
+    width: 9px;
+    height: 9px;
     border-radius: 50%;
-    background: var(--ok);
-    box-shadow: 0 0 0 0 var(--ok);
-    animation: pulse 2s infinite;
+    background: var(--signal);
+    box-shadow: 0 0 0 1px var(--ink);
+    animation: ping 1.8s var(--ease-out) infinite;
   }
-  @keyframes pulse {
-    70% {
-      box-shadow: 0 0 0 8px transparent;
+  @keyframes ping {
+    0% {
+      box-shadow: 0 0 0 1px var(--ink), 0 0 0 0 rgb(212 255 58 / 0.9);
     }
     100% {
-      box-shadow: 0 0 0 0 transparent;
+      box-shadow: 0 0 0 1px var(--ink), 0 0 0 12px rgb(212 255 58 / 0);
     }
   }
-  h1 {
-    font-size: clamp(2.7rem, 7.4vw, 5.6rem);
-    line-height: 1.02;
-    margin-bottom: 0.45em;
-  }
-  .rotator {
-    font-style: italic;
-    color: var(--accent);
-    font-weight: 500;
-  }
-  .caret {
-    color: var(--accent);
-  }
-  .lede {
-    font-size: clamp(1.08rem, 2vw, 1.28rem);
-    color: var(--ink-soft);
-    max-width: 54ch;
-  }
-  .cta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.6rem;
-    margin-top: 2rem;
-  }
-  .hero-card {
-    padding: 1.5rem;
-    transform: rotate(1.2deg);
-    transition: transform 0.4s;
-  }
-  .hero-card:hover {
-    transform: rotate(0);
-  }
-  .facts {
-    list-style: none;
-    padding: 0;
-    margin: 1rem 0 1.2rem;
-  }
-  .facts li {
-    display: grid;
-    grid-template-columns: 76px 1fr;
-    gap: 0.75rem;
-    padding: 0.6rem 0;
-    border-top: 1px dashed var(--line);
-    font-size: 0.95rem;
-  }
-  .k {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--ink-mute);
-    padding-top: 0.2rem;
-  }
-
-  .stats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    border-block: 1px solid var(--line);
-  }
-  .stat {
+  .hero-name {
+    font-size: var(--t-mega);
+    letter-spacing: -0.035em;
     display: flex;
     flex-direction: column;
-    padding: 1.6rem 1.2rem;
-    text-decoration: none;
-    border-left: 1px solid var(--line);
+    margin-block: auto 0;
+    padding-top: 6vh;
   }
-  .stat:first-child {
-    border-left: 0;
+  .hn-1 {
+    display: block;
+    margin-left: -0.04em;
   }
-  .stat .n {
-    font-family: var(--font-display);
-    font-size: clamp(2.2rem, 5vw, 3.4rem);
-    font-weight: 600;
-    line-height: 1;
+  .hn-2 {
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-end;
+    gap: 0.3em;
   }
-  .stat .l {
-    font-size: 0.85rem;
-    color: var(--ink-mute);
-    margin-top: 0.4rem;
+  .hn-aside {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    font-size: clamp(1.1rem, 2.1vw, 2.2rem);
+    line-height: 1.05;
+    padding-bottom: 0.9em;
+    text-align: right;
   }
-  .stat:hover .n {
-    color: var(--accent);
+  .hn-aside .serif {
+    font-size: 1em;
+    color: var(--ink-2);
   }
-
-  .split {
+  .verbs {
     display: grid;
-    grid-template-columns: 1.7fr 1fr;
-    gap: 3rem;
+    overflow: hidden;
+    padding-block: 0.08em 0.14em;
+    font-family: var(--f-serif);
+    font-style: italic;
+    text-transform: none;
+    letter-spacing: -0.01em;
+    font-weight: 400;
+  }
+  .verb {
+    grid-area: 1 / 1;
+    opacity: 0;
+    white-space: nowrap;
+    background: var(--signal);
+    color: var(--signal-ink);
+    padding: 0 0.2em;
+  }
+  .verb.on {
+    opacity: 1;
+  }
+  .hero-bottom {
+    margin-top: 28px;
+    padding-top: 14px;
+    border-top: 1px solid var(--rule-strong);
     align-items: start;
   }
-  .journal-list {
-    margin: 0;
-    padding: 0;
+  .hb-intro {
+    grid-column: 1 / span 5;
+    font-size: clamp(1rem, 1.3vw, 1.2rem);
+    line-height: 1.4;
+    max-width: 44ch;
   }
-  .now {
-    padding: 1.6rem;
-    position: sticky;
-    top: 90px;
-  }
-  .prose.small {
-    font-size: 0.97rem;
-    margin: 1rem 0 1.2rem;
-  }
-
-  .hobbies {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
-    gap: 1rem;
-  }
-  .hobby {
-    padding: 1.5rem;
-    text-decoration: none;
-    transition: transform 0.25s, border-color 0.25s;
-  }
-  .hobby:hover {
-    color: var(--ink);
-    transform: translateY(-3px);
-    border-color: var(--accent);
-  }
-  .hobby .icon {
-    font-size: 2rem;
-    display: block;
-    margin-bottom: 0.8rem;
-  }
-  .hobby h3 {
-    margin-bottom: 0.3rem;
-  }
-  .hobby p {
-    color: var(--ink-soft);
-    font-size: 0.93rem;
-    margin: 0;
-  }
-
-  .picks {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
-    gap: 1rem;
-  }
-  .pick {
+  .hb-meta {
+    grid-column: 7 / span 4;
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
-    padding: 1.2rem 1.2rem 1.4rem;
-    border-radius: 6px 16px 16px 6px;
-    border: 1px solid var(--line);
-    border-left: 6px solid var(--accent);
-    background: var(--bg-elev);
-    text-decoration: none;
-    min-height: 150px;
-    transition: transform 0.25s;
+    gap: 0.4em;
+    color: var(--ink-2);
   }
-  .pick:nth-child(3n + 2) {
-    border-left-color: var(--ink);
+  .hb-scroll {
+    grid-column: 12;
+    justify-self: end;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
   }
-  .pick:nth-child(3n) {
-    border-left-color: var(--ok);
+  .scroll-line {
+    width: 1px;
+    height: 48px;
+    background: var(--rule);
+    position: relative;
+    overflow: hidden;
   }
-  .pick:hover {
-    color: var(--ink);
-    transform: translateY(-3px) rotate(-0.6deg);
+  .scroll-line::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--ink);
+    animation: drip 2s var(--ease-io) infinite;
   }
-  .pick strong {
-    font-family: var(--font-display);
-    font-size: 1.2rem;
-    line-height: 1.2;
-    font-weight: 600;
-  }
-  .pick .by {
-    color: var(--ink-mute);
-    font-size: 0.88rem;
-    margin-top: auto;
+  @keyframes drip {
+    0% {
+      transform: translateY(-100%);
+    }
+    100% {
+      transform: translateY(100%);
+    }
   }
 
+  /* ─── Manifesto ─── */
+  .manifesto {
+    padding-block: clamp(80px, 14vw, 220px) clamp(60px, 8vw, 120px);
+  }
+  .mf-text {
+    font-family: var(--f-body);
+    font-size: clamp(2rem, 5.2vw, 5.4rem);
+    font-weight: 450;
+    line-height: 1.02;
+    letter-spacing: -0.045em;
+    margin-top: clamp(32px, 5vw, 80px);
+    text-indent: 16.6%;
+    text-wrap: pretty;
+  }
+  .mf-text :global(.serif) {
+    font-size: 1.1em;
+    letter-spacing: -0.03em;
+  }
+  .stats {
+    margin-top: clamp(56px, 9vw, 140px);
+    border-top: 1px solid var(--rule-strong);
+  }
+  .stat {
+    grid-column: span 3;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 18px 0 0;
+    position: relative;
+  }
+  .stat + .stat::before {
+    content: '';
+    position: absolute;
+    left: calc(var(--gap) / -2);
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--rule);
+  }
+  .stat-n {
+    font-size: clamp(4rem, 10vw, 10rem);
+    font-variant-numeric: tabular-nums;
+    transition: color 0.3s;
+  }
+  .stat:hover .stat-n {
+    font-family: var(--f-serif);
+    font-style: italic;
+    font-weight: 400;
+  }
+  .stat-l {
+    color: var(--ink-3);
+  }
+
+  /* ─── Work ─── */
+  .work {
+    padding-top: clamp(80px, 10vw, 160px);
+  }
+  .work-pin {
+    overflow: hidden;
+  }
+  .work-track {
+    display: flex;
+    gap: clamp(20px, 3vw, 48px);
+    align-items: stretch;
+    width: max-content;
+    padding-block: clamp(32px, 5vw, 64px);
+    min-height: 100svh;
+    align-items: flex-start;
+  }
+  .work-intro {
+    width: clamp(280px, 30vw, 520px);
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .work-intro h2 {
+    font-size: var(--t-huge);
+  }
+  .work-hint {
+    color: var(--ink-3);
+  }
+  .wcard {
+    width: clamp(320px, 42vw, 680px);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .wcard:nth-child(odd):not(.wcard-all) {
+    margin-top: 16vh;
+  }
+  .wcard-media {
+    overflow: hidden;
+    border-radius: 2px;
+  }
+  .wcard-media :global(.cover) {
+    transition: transform 1.2s var(--ease-out);
+  }
+  .wcard:hover .wcard-media :global(svg) {
+    transform: scale(1.05);
+    transition: transform 1.2s var(--ease-out);
+  }
+  .wcard-media :global(svg) {
+    transition: transform 1.2s var(--ease-out);
+  }
+  .wcard-meta {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 10px;
+    border-top: 1px solid var(--rule-strong);
+    color: var(--ink-2);
+  }
+  .wcard-title {
+    font-size: clamp(2rem, 4vw, 4rem);
+  }
+  .wcard:hover .wcard-title {
+    font-family: var(--f-serif);
+    font-style: italic;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: -0.02em;
+  }
+  .wcard-sum {
+    color: var(--ink-2);
+    max-width: 46ch;
+  }
+  .wcard-all {
+    width: clamp(260px, 26vw, 420px);
+    aspect-ratio: 3 / 4;
+    justify-content: flex-end;
+    padding: 24px;
+    background: var(--signal);
+    color: var(--signal-ink);
+    border-radius: 2px;
+    transition: border-radius 0.6s var(--ease-out);
+  }
+  .wcard-all:hover {
+    border-radius: 50% 50% 2px 2px;
+  }
+  .wcard-all .display {
+    font-size: clamp(2.6rem, 4.6vw, 5rem);
+  }
+
+  /* ─── Journal ─── */
+  .journal {
+    padding-top: clamp(80px, 10vw, 160px);
+  }
+  .jr {
+    margin-top: clamp(24px, 4vw, 48px);
+    row-gap: 40px;
+  }
+  .jr-lead {
+    grid-column: 1 / span 7;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .jr-cover {
+    overflow: hidden;
+  }
+  .jr-lead-meta {
+    display: flex;
+    gap: 1.4em;
+    color: var(--ink-2);
+    flex-wrap: wrap;
+  }
+  .kind {
+    background: var(--signal);
+    color: var(--signal-ink);
+    padding: 0.1em 0.4em;
+  }
+  .jr-lead-title {
+    font-size: var(--t-xl);
+  }
+  .jr-lead:hover .jr-lead-title {
+    text-decoration: underline;
+    text-decoration-thickness: 0.06em;
+    text-underline-offset: 0.08em;
+  }
+  .jr-lead-desc {
+    font-size: var(--t-m);
+    line-height: 1.35;
+    color: var(--ink-2);
+    max-width: 38ch;
+  }
+  .jr-list {
+    grid-column: 9 / -1;
+    border-top: 1px solid var(--rule-strong);
+    align-self: start;
+    position: sticky;
+    top: calc(var(--header-h) + 24px);
+  }
+  .jr-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 5.5em 1fr auto;
+    gap: 12px;
+    align-items: baseline;
+    padding: 18px 0;
+    border-bottom: 1px solid var(--rule);
+    isolation: isolate;
+    transition: padding 0.5s var(--ease-out);
+  }
+  .jr-row::before {
+    content: '';
+    position: absolute;
+    inset: 0 calc(var(--pad) * -0.4);
+    background: var(--signal);
+    z-index: -1;
+    transform: scaleY(0);
+    transform-origin: bottom;
+    transition: transform 0.5s var(--ease-out);
+  }
+  .jr-row:hover::before {
+    transform: scaleY(1);
+  }
+  .jr-row:hover {
+    color: var(--signal-ink);
+  }
+  .jr-kind,
+  .jr-date {
+    color: inherit;
+    opacity: 0.6;
+  }
+  .jr-title {
+    font-family: var(--f-display);
+    font-stretch: 75%;
+    font-weight: 650;
+    text-transform: uppercase;
+    font-size: 1.45rem;
+    line-height: 0.95;
+    letter-spacing: -0.01em;
+  }
+
+  /* ─── Hobbies desk ─── */
+  .hobbies {
+    padding-top: clamp(80px, 10vw, 160px);
+  }
+  .hb-head {
+    margin-top: clamp(24px, 4vw, 48px);
+    align-items: end;
+  }
+  .hb-head h2 {
+    grid-column: 1 / span 8;
+    font-size: var(--t-huge);
+  }
+  .hb-note {
+    grid-column: 10 / -1;
+    justify-self: end;
+    color: var(--ink-3);
+    text-align: right;
+  }
+  .desk {
+    position: relative;
+    height: calc(var(--rows) * 460px);
+    margin-top: 32px;
+    border: 1px dashed var(--rule);
+    background-image: radial-gradient(var(--rule) 1px, transparent 1px);
+    background-size: 22px 22px;
+    overflow: hidden;
+  }
+  .sticker {
+    position: absolute;
+    width: clamp(220px, 20vw, 300px);
+    padding: 22px 22px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--bg);
+    color: var(--fg);
+    rotate: var(--rot);
+    border-radius: 3px;
+    box-shadow:
+      0 1px 0 rgb(0 0 0 / 0.08),
+      0 18px 40px -18px rgb(0 0 0 / 0.45);
+    user-select: none;
+    touch-action: none;
+    transition: box-shadow 0.4s;
+  }
+  .sticker:hover {
+    box-shadow:
+      0 1px 0 rgb(0 0 0 / 0.08),
+      0 30px 60px -20px rgb(0 0 0 / 0.55);
+  }
+  .sticker::after {
+    /* bit of tape */
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    width: 70px;
+    height: 20px;
+    translate: -50% 0;
+    rotate: -3deg;
+    background: rgb(255 255 255 / 0.45);
+    backdrop-filter: blur(2px);
+    border: 1px solid rgb(0 0 0 / 0.05);
+  }
+  .st-icon {
+    font-size: 2.6rem;
+    line-height: 1;
+  }
+  .st-title {
+    font-size: 2.2rem;
+  }
+  .st-sum {
+    font-size: 0.95rem;
+    line-height: 1.35;
+    opacity: 0.85;
+  }
+  .st-since {
+    opacity: 0.65;
+    margin-top: 4px;
+  }
+
+  /* ─── Shelf ─── */
+  .shelf {
+    padding-top: clamp(80px, 10vw, 160px);
+  }
+  .shelf-grid {
+    margin-top: clamp(24px, 4vw, 48px);
+    align-items: end;
+    row-gap: 32px;
+  }
+  .shelf-title {
+    grid-column: 1 / span 4;
+    font-size: var(--t-xl);
+  }
+  .ledge-wrap {
+    grid-column: 5 / -1;
+  }
+
+  /* ─── Now ─── */
+  .now {
+    padding-top: clamp(80px, 10vw, 160px);
+  }
+  .now-grid {
+    margin-top: clamp(24px, 4vw, 48px);
+    row-gap: 24px;
+  }
+  .now-stamp {
+    grid-column: 1 / span 4;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .now-day {
+    font-size: clamp(7rem, 16vw, 16rem);
+    line-height: 0.78;
+    color: var(--ink);
+    -webkit-text-stroke: 0;
+  }
+  .muted {
+    color: var(--ink-3);
+  }
+  .now-body {
+    grid-column: 6 / -1;
+    font-size: clamp(1.15rem, 1.6vw, 1.5rem);
+    line-height: 1.4;
+  }
+
+  /* ─── Responsive ─── */
   @media (max-width: 900px) {
-    .hero,
-    .split {
-      grid-template-columns: 1fr;
+    .hero-name {
+      font-size: 25vw;
     }
-    .hero-card {
-      transform: none;
+    .ht-1 {
+      grid-column: 1 / span 6;
     }
-    .now {
-      position: static;
+    .ht-2 {
+      display: none;
     }
-    .stats {
-      grid-template-columns: repeat(2, 1fr);
+    .ht-3 {
+      grid-column: 7 / -1;
     }
-    .stat:nth-child(3) {
-      border-left: 0;
+    .hn-2 {
+      flex-direction: column-reverse;
+      align-items: flex-end;
+      gap: 0.1em;
+    }
+    .hn-aside {
+      padding-bottom: 0;
+    }
+    .hb-intro {
+      grid-column: 1 / -1;
+    }
+    .hb-meta {
+      grid-column: 1 / span 9;
+      margin-top: 18px;
+    }
+    .hb-scroll {
+      grid-column: 11 / -1;
+      margin-top: 18px;
+    }
+    .mf-text {
+      text-indent: 0;
+    }
+    .stat {
+      grid-column: span 6;
+      padding-bottom: 20px;
+    }
+    .stat:nth-child(3)::before {
+      display: none;
     }
     .stat:nth-child(n + 3) {
-      border-top: 1px solid var(--line);
+      border-top: 1px solid var(--rule);
+    }
+    .work-pin {
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+    }
+    .work-track {
+      min-height: 0;
+      align-items: start;
+    }
+    .work-intro {
+      width: 70vw;
+      scroll-snap-align: start;
+    }
+    .wcard {
+      width: 80vw;
+      scroll-snap-align: start;
+    }
+    .wcard:nth-child(odd):not(.wcard-all) {
+      margin-top: 0;
+    }
+    .wcard-all {
+      width: 60vw;
+    }
+    .jr-lead,
+    .jr-list {
+      grid-column: 1 / -1;
+    }
+    .hb-head h2 {
+      grid-column: 1 / -1;
+    }
+    .hb-note {
+      display: none;
+    }
+    .desk {
+      height: auto;
+      display: flex;
+      gap: 16px;
+      overflow-x: auto;
+      padding: 28px 16px;
+      scroll-snap-type: x mandatory;
+    }
+    .sticker {
+      position: relative;
+      left: auto !important;
+      top: auto !important;
+      flex-shrink: 0;
+      width: 72vw;
+      scroll-snap-align: center;
+      touch-action: auto;
+    }
+    .shelf-title,
+    .ledge-wrap {
+      grid-column: 1 / -1;
+    }
+    .now-stamp,
+    .now-body {
+      grid-column: 1 / -1;
     }
   }
 </style>

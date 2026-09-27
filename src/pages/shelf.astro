@@ -1,117 +1,247 @@
 ---
 import Base from '../layouts/Base.astro';
+import PageHero from '../components/PageHero.astro';
 import FilterBar from '../components/FilterBar.astro';
+import Ledge from '../components/Ledge.astro';
 import { getShelf, formatDate } from '../lib/content';
 
 const items = await getShelf();
 const kindNames: Record<string, string> = {
-  book: 'Books', film: 'Films', series: 'Series', podcast: 'Podcasts', music: 'Music', game: 'Games',
-  tool: 'Tools', article: 'Articles', place: 'Places', course: 'Courses', other: 'Other',
+  book: 'Books',
+  film: 'Films',
+  series: 'Series',
+  podcast: 'Podcasts',
+  music: 'Music',
+  game: 'Games',
+  tool: 'Tools',
+  article: 'Articles',
+  place: 'Places',
+  course: 'Courses',
+  other: 'Other',
 };
 const kinds = Object.keys(kindNames)
   .map((k) => ({ key: k, label: kindNames[k], count: items.filter((i) => i.data.kind === k).length }))
   .filter((k) => k.count > 0);
 const statusOpts = [
-  { key: 'favorite', label: '★ Favorites', count: items.filter((i) => i.data.favorite).length },
+  { key: 'favorite', label: '★ Favourites', count: items.filter((i) => i.data.favorite).length },
   { key: 'in-progress', label: 'In progress', count: items.filter((i) => i.data.status === 'in-progress').length },
   { key: 'wishlist', label: 'Wishlist', count: items.filter((i) => i.data.status === 'wishlist').length },
 ].filter((o) => o.count > 0);
-const statusText = { wishlist: 'On the list', 'in-progress': 'In progress', done: 'Done' } as const;
+const current = items.find((i) => i.data.status === 'in-progress');
+const statusText = { wishlist: 'Up next', 'in-progress': 'In progress', done: 'Done' } as const;
 ---
 
 <Base title="Shelf" description="Books, films, podcasts, tools, places and other discoveries I recommend.">
-  <section class="wrap page-head">
-    <p class="eyebrow">Discoveries</p>
-    <h1>The Shelf</h1>
-    <p class="lede">A living catalogue of books, films, podcasts, tools, places and other discoveries — what I loved, what I’m into now, and what’s next.</p>
-  </section>
-  <section class="wrap" id="shelf">
+  <PageHero
+    index="05"
+    label="Discoveries & recommendations"
+    title="The"
+    italic="shelf"
+    count={items.length}
+    intro="A living catalogue of books, films, podcasts, tools and places — what I loved, what I’m into right now, and what’s next. Pull a spine to read my note."
+  >
     <FilterBar target="#shelf" options={[...statusOpts, ...kinds]} />
-    <div class="shelf">
-      {items.map((s) => {
-        const d = s.data;
-        const keys = [d.kind, d.status, ...(d.favorite ? ['favorite'] : []), ...d.tags].join('|');
-        return (
-          <article class:list={['item card reveal', d.kind]} id={s.id} data-filter-item data-filter-keys={keys}>
-            <header>
-              <span class="meta kind">{d.kind}</span>
-              {d.favorite && <span class="fav" title="Favorite">★</span>}
-            </header>
-            <h2>{d.url ? <a href={d.url} target="_blank" rel="noopener">{d.title}</a> : d.title}</h2>
-            {d.creator && <p class="by">{d.creator}</p>}
-            {d.note && <p class="note">“{d.note}”</p>}
-            <footer class="meta">
-              {d.rating !== undefined && <span class="stars" aria-label={`${d.rating} out of 5`}>{'●'.repeat(Math.round(d.rating))}<span class="off">{'●'.repeat(5 - Math.round(d.rating))}</span></span>}
-              <span>{statusText[d.status]}{d.date && ` · ${formatDate(d.date, { year: 'numeric', month: 'short' })}`}</span>
-            </footer>
-          </article>
-        );
-      })}
-    </div>
-  </section>
+  </PageHero>
+
+  <div id="shelf">
+    <section class="pad grid12 shelfwrap">
+      <div class="aside">
+        {
+          current && (
+            <p class="reading">
+              <span class="label">Currently on the nightstand</span>
+              <span class="display cur-title">{current.data.title}</span>
+              {current.data.creator && <em class="serif">by {current.data.creator}</em>}
+            </p>
+          )
+        }
+        <p class="mono hint">↳ Hover a spine for my note, click to jump to it.</p>
+      </div>
+      <div class="ledge-col">
+        <Ledge items={items} filterable />
+      </div>
+    </section>
+
+    <section class="pad catalogue">
+      <div class="sec-head">
+        <span class="label"><span class="num">≡</span></span>
+        <span class="label">Catalogue</span>
+        <span class="label">Rating / status</span>
+      </div>
+      <ol>
+        {
+          items.map((s) => {
+            const d = s.data;
+            const keys = [d.kind, d.status, ...(d.favorite ? ['favorite'] : []), ...d.tags].join('|');
+            const r = d.rating !== undefined ? Math.round(d.rating) : undefined;
+            return (
+              <li id={s.id} class="item" data-filter-item data-filter-keys={keys}>
+                <span class="i-kind mono">{d.kind}</span>
+                <div class="i-main">
+                  <h2 class="i-title display">
+                    {d.url ? (
+                      <a class="ulink" href={d.url} target="_blank" rel="noopener">
+                        {d.title} ↗
+                      </a>
+                    ) : (
+                      d.title
+                    )}
+                    {d.favorite && <span class="i-fav" title="Favourite">★</span>}
+                  </h2>
+                  {d.creator && <p class="i-by mono">by {d.creator}</p>}
+                </div>
+                {d.note ? <p class="i-note">{d.note}</p> : <span />}
+                <div class="i-meta mono">
+                  {r !== undefined && (
+                    <span class="stars" aria-label={`${r} out of 5`}>
+                      {Array.from({ length: 5 }, (_, k) => (
+                        <i class:list={{ on: k < r }} />
+                      ))}
+                    </span>
+                  )}
+                  <span>
+                    {statusText[d.status]}
+                    {d.date && ` · ${formatDate(d.date, { year: 'numeric', month: 'short' })}`}
+                  </span>
+                </div>
+              </li>
+            );
+          })
+        }
+      </ol>
+    </section>
+  </div>
 </Base>
 
+<script>
+  import { gsap } from '../scripts/app';
+  // Spine → catalogue row: smooth scroll + flash
+  document.querySelectorAll<HTMLAnchorElement>('[data-spine]').forEach((a) =>
+    a.addEventListener('click', (e) => {
+      const row = document.getElementById(a.dataset.spine!);
+      if (!row) return;
+      e.preventDefault();
+      history.replaceState(null, '', `#${row.id}`);
+      const lenis = (window as any).__lenis;
+      lenis ? lenis.scrollTo(row, { offset: -120, duration: 1.4 }) : row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      gsap.fromTo(row, { backgroundColor: 'rgba(212,255,58,1)' }, { backgroundColor: 'rgba(212,255,58,0)', duration: 2.2, delay: 0.8, ease: 'power2.out' });
+    }),
+  );
+</script>
+
 <style>
-  .shelf {
-    columns: 3 280px;
-    column-gap: 1.1rem;
-    padding-bottom: 40px;
+  .shelfwrap {
+    align-items: end;
+    row-gap: 32px;
+    margin-top: 24px;
   }
-  .item {
-    break-inside: avoid;
-    margin-bottom: 1.1rem;
-    padding: 1.3rem 1.3rem 1.1rem;
+  .aside {
+    grid-column: 1 / span 4;
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 32px;
+    padding-bottom: 20px;
+  }
+  .reading {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .cur-title {
+    font-size: clamp(2.4rem, 4.4vw, 4.4rem);
+  }
+  .reading .serif {
+    font-size: 1.4rem;
+    color: var(--ink-2);
+  }
+  .hint {
+    color: var(--ink-3);
+  }
+  .ledge-col {
+    grid-column: 5 / -1;
+  }
+  .catalogue {
+    margin-top: clamp(64px, 9vw, 140px);
+  }
+  .item {
+    display: grid;
+    grid-template-columns: 8% 1fr 34% 14%;
+    gap: var(--gap);
+    align-items: baseline;
+    padding: 22px 0;
+    border-bottom: 1px solid var(--rule);
+    scroll-margin-top: 120px;
   }
   .item:target {
-    outline: 2px solid var(--accent);
+    background: rgb(212 255 58 / 0.35);
   }
-  header {
-    display: flex;
-    justify-content: space-between;
+  .i-kind {
+    color: var(--ink-3);
   }
-  .kind {
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    font-size: 0.68rem;
+  .i-title {
+    font-size: clamp(1.8rem, 3.2vw, 3.2rem);
+    line-height: 0.92;
   }
-  .fav {
-    color: var(--accent);
+  .i-fav {
+    font-size: 0.5em;
+    vertical-align: super;
+    margin-left: 0.2em;
+    color: var(--ink);
+    background: var(--signal);
+    padding: 0 0.2em;
   }
-  h2 {
-    font-size: 1.3rem;
-    margin: 0;
+  .i-by {
+    color: var(--ink-3);
+    margin-top: 8px;
   }
-  h2 a {
-    text-decoration: none;
-  }
-  .by {
-    margin: 0;
-    color: var(--ink-mute);
-    font-size: 0.9rem;
-  }
-  .note {
-    font-family: var(--font-display);
+  .i-note {
+    font-family: var(--f-serif);
     font-style: italic;
-    color: var(--ink-soft);
-    margin: 0.5rem 0 0;
-    line-height: 1.5;
+    font-size: clamp(1.2rem, 1.6vw, 1.5rem);
+    line-height: 1.2;
+    color: var(--ink-2);
   }
-  footer {
+  .i-meta {
     display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-top: 0.8rem;
-    padding-top: 0.7rem;
-    border-top: 1px dashed var(--line);
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    color: var(--ink-2);
+    text-align: right;
   }
   .stars {
-    color: var(--accent);
-    letter-spacing: 0.1em;
+    display: inline-flex;
+    gap: 3px;
   }
-  .stars .off {
-    color: var(--line);
+  .stars i {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid var(--ink);
+  }
+  .stars i.on {
+    background: var(--ink);
+  }
+  @media (max-width: 900px) {
+    .aside,
+    .ledge-col {
+      grid-column: 1 / -1;
+    }
+    .item {
+      grid-template-columns: 1fr auto;
+      row-gap: 10px;
+    }
+    .i-main,
+    .i-note {
+      grid-column: 1 / -1;
+    }
+    .i-kind {
+      grid-row: 1;
+    }
+    .i-meta {
+      grid-row: 1;
+      grid-column: 2;
+      flex-direction: row;
+    }
   }
 </style>

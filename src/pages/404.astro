@@ -1,27 +1,56 @@
 ---
 import Base from '../layouts/Base.astro';
+import HeroMap from '../components/HeroMap.astro';
 import { url } from '../lib/content';
 ---
 
-<Base title="Not found" noindex>
-  <section class="wrap page-head nf">
-    <p class="eyebrow">Error 404</p>
-    <h1>This page wandered off.</h1>
-    <p class="lede">It might have moved, or it never existed. Try searching — or head home.</p>
-    <div class="cta">
-      <a class="btn" href={url()}>Back home</a>
-      <button class="btn ghost" type="button" data-open-search>Search the site</button>
+<Base title="Off the map" noindex>
+  <section class="nf">
+    <HeroMap />
+    <div class="nf-in pad">
+      <p class="label" data-intro>Error 404 — uncharted territory</p>
+      <h1 class="display" data-intro="lines">Off the <em class="serif">map</em></h1>
+      <p class="nf-p" data-intro>This page wandered off, moved, or never existed. The contours go on forever — the content doesn’t.</p>
+      <div class="nf-cta" data-intro>
+        <a class="pill solid" href={url()} data-magnetic>Back to base <span class="arr">↗</span></a>
+        <button class="pill" type="button" data-open-search data-magnetic>Search the atlas</button>
+      </div>
     </div>
   </section>
 </Base>
 
 <style>
   .nf {
-    min-height: 55vh;
-  }
-  .cta {
+    position: relative;
+    min-height: 100svh;
     display: flex;
-    gap: 0.6rem;
-    margin-top: 2rem;
+    align-items: flex-end;
+    overflow: hidden;
+  }
+  .nf-in {
+    position: relative;
+    z-index: 2;
+    padding-bottom: clamp(32px, 6vw, 80px);
+    pointer-events: none;
+  }
+  .nf-in a,
+  .nf-in button {
+    pointer-events: auto;
+  }
+  h1 {
+    font-size: var(--t-mega);
+    margin-top: 16px;
+  }
+  .nf-p {
+    max-width: 40ch;
+    font-size: var(--t-m);
+    line-height: 1.3;
+    margin-top: 24px;
+  }
+  .nf-cta {
+    display: flex;
+    gap: 10px;
+    margin-top: 32px;
+    flex-wrap: wrap;
   }
 </style>

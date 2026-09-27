@@ -1,5 +1,6 @@
 ---
 import Base from '../../layouts/Base.astro';
+import PageHero from '../../components/PageHero.astro';
 import { getTagIndex, url, formatDate } from '../../lib/content';
 
 export async function getStaticPaths() {
@@ -12,72 +13,68 @@ const sorted = [...items].sort((a, b) => (b.date?.valueOf() ?? 0) - (a.date?.val
 ---
 
 <Base title={`#${label}`} description={`Everything tagged “${label}”.`}>
-  <section class="wrap page-head">
-    <a class="meta back" href={url('tags')}>← All tags</a>
-    <p class="eyebrow">Tag</p>
-    <h1>#{label}</h1>
-    <p class="lede">{items.length} {items.length === 1 ? 'thing' : 'things'} tagged “{label}”.</p>
-  </section>
-  <ul class="wrap list">
+  <PageHero index="#" label="Tagged" title={`#${label}`} count={items.length} intro={`Everything in the atlas filed under “${label}”.`}>
+    <a class="mono ulink" href={url('tags')}>← All tags</a>
+  </PageHero>
+  <ol class="pad list">
     {
       sorted.map((i) => (
         <li>
-          <a href={i.href}>
-            <span class="chip">{i.kind}</span>
-            <span class="t">
-              <strong>{i.title}</strong>
-              {i.description && <span class="d">{i.description}</span>}
-            </span>
-            {i.date && <span class="meta">{formatDate(i.date)}</span>}
+          <a class="row" href={i.href} data-cursor="Open">
+            <span class="mono k">{i.kind}</span>
+            <span class="t display">{i.title}</span>
+            <span class="d">{i.description}</span>
+            <span class="mono dt">{i.date ? formatDate(i.date) : ''}</span>
           </a>
         </li>
       ))
     }
-  </ul>
+  </ol>
 </Base>
 
 <style>
-  .back {
-    text-decoration: none;
-    display: block;
-    width: fit-content;
-    margin-bottom: 1.5rem;
-  }
   .list {
-    list-style: none;
-    padding-bottom: 60px;
+    border-top: 1px solid var(--rule-strong);
+    margin-inline: var(--pad);
+    padding: 0;
   }
-  li {
-    border-top: 1px solid var(--line);
-  }
-  a {
+  .row {
     display: grid;
-    grid-template-columns: 110px 1fr auto;
-    gap: 1rem;
+    grid-template-columns: 10% 1fr 32% 10%;
+    gap: var(--gap);
     align-items: baseline;
-    padding: 1.1rem 0;
-    text-decoration: none;
+    padding-block: 20px;
+    border-bottom: 1px solid var(--rule);
+    transition: background 0.3s;
   }
-  .chip {
-    justify-self: start;
+  .row:hover {
+    background: var(--signal);
+    color: var(--signal-ink);
+  }
+  .k,
+  .dt {
+    opacity: 0.6;
   }
   .t {
-    display: flex;
-    flex-direction: column;
-  }
-  strong {
-    font-family: var(--font-display);
-    font-size: 1.2rem;
-    font-weight: 600;
+    font-size: clamp(1.8rem, 3.4vw, 3.4rem);
   }
   .d {
-    color: var(--ink-soft);
-    font-size: 0.93rem;
+    opacity: 0.8;
   }
-  @media (max-width: 640px) {
-    a {
-      grid-template-columns: 1fr;
-      gap: 0.3rem;
+  .dt {
+    justify-self: end;
+  }
+  @media (max-width: 900px) {
+    .row {
+      grid-template-columns: 1fr auto;
+    }
+    .t,
+    .d {
+      grid-column: 1 / -1;
+    }
+    .dt {
+      grid-row: 1;
+      grid-column: 2;
     }
   }
 </style>

@@ -1,132 +1,471 @@
 ---
 import { getEntry, render } from 'astro:content';
 import Base from '../layouts/Base.astro';
-import Timeline from '../components/Timeline.astro';
+import Marquee from '../components/Marquee.astro';
 import { site } from '../site.config';
-import { getExperience, url } from '../lib/content';
+import { getExperience, url, formatDate } from '../lib/content';
 
 const about = await getEntry('pages', 'about');
-const { Content } = about ? await render(about) : { Content: null };
+const Content = about ? (await render(about)).Content : null;
 const experience = await getExperience();
-const work = experience.filter((e) => e.data.kind === 'work' || e.data.kind === 'volunteer');
-const education = experience.filter((e) => e.data.kind === 'education' || e.data.kind === 'certification');
-const awards = experience.filter((e) => e.data.kind === 'award');
+const groups = [
+  { n: '03', title: 'Experience', items: experience.filter((e) => e.data.kind === 'work' || e.data.kind === 'volunteer') },
+  { n: '04', title: 'Education', items: experience.filter((e) => e.data.kind === 'education' || e.data.kind === 'certification') },
+  { n: '05', title: 'Recognition', items: experience.filter((e) => e.data.kind === 'award') },
+].filter((g) => g.items.length);
+const year = (d?: Date) => (d ? d.getUTCFullYear() : 'Now');
 ---
 
 <Base title="About" description={about?.data.description ?? site.intro}>
-  <section class="wrap page-head">
-    <p class="eyebrow">About me</p>
-    <h1>{about?.data.title ?? `About ${site.name}`}</h1>
-  </section>
-
-  <section class="wrap intro">
-    <div class="prose">{Content && <Content />}</div>
-    <aside class="card side">
-      <p class="eyebrow">Quick facts</p>
-      <dl>
-        <dt>Name</dt><dd>{site.name}</dd>
-        <dt>Role</dt><dd>{site.headline}</dd>
-        {site.location && <><dt>Based</dt><dd>{site.location}</dd></>}
-        {site.languages.length > 0 && <><dt>Speaks</dt><dd>{site.languages.map((l) => l.name).join(', ')}</dd></>}
-      </dl>
-      <div class="side-cta">
-        <a class="btn" href={url('cv')}>View CV</a>
-        {site.email && <a class="btn ghost" href={`mailto:${site.email}`}>Email me</a>}
-      </div>
-      <div class="chips socials">
-        {site.socials.map((s) => <a class="chip" href={s.url} rel="me noopener" target="_blank">{s.label} ↗</a>)}
-      </div>
-    </aside>
-  </section>
-
-  <section class="wrap section">
-    <div class="section-head"><div><p class="eyebrow">Toolbox</p><h2>Skills</h2></div></div>
-    <div class="skills">
-      {site.skills.map((g) => (
-        <div class="skill card reveal">
-          <h3>{g.group}</h3>
-          <div class="chips">{g.items.map((i) => <span class="chip">{i}</span>)}</div>
-        </div>
-      ))}
+  <header class="a-hero pad">
+    <div class="a-top grid12">
+      <span class="label" data-intro><span class="num">01</span></span>
+      <span class="label a-lab" data-intro>About — the person behind the index</span>
     </div>
+    <div class="a-main grid12">
+      <h1 class="display a-title" data-intro="lines">
+        Hello, <br />I’m <em class="serif">{site.name.split(' ')[0]}</em>
+      </h1>
+
+      <div class="idcard" data-intro data-tilt>
+        <div class="id-in">
+          <div class="id-head mono">
+            <span>Field Atlas</span>
+            <span>Explorer’s card</span>
+          </div>
+          <div class="id-body">
+            <span class="id-mono display">{site.initials}</span>
+            <dl>
+              <div><dt class="label">Name</dt><dd>{site.name}</dd></div>
+              <div><dt class="label">Occupation</dt><dd>{site.headline}</dd></div>
+              {site.location && <div><dt class="label">Based</dt><dd>{site.location}</dd></div>}
+              {site.languages.length > 0 && <div><dt class="label">Speaks</dt><dd>{site.languages.map((l) => l.name).join(' · ')}</dd></div>}
+              <div><dt class="label">Status</dt><dd>{site.availability.open ? site.availability.label : 'Heads down'}</dd></div>
+            </dl>
+          </div>
+          <div class="id-foot mono">
+            <span>No. {String(new Date().getFullYear()).slice(2)}-{site.initials}-001</span>
+            <span class="id-code" aria-hidden="true">{'|'.repeat(28)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="a-story pad grid12">
+    <span class="label a-sl"><span class="num">02</span> The short story</span>
+    <div class="prose a-prose" data-rise>{Content && <Content />}</div>
   </section>
 
-  {work.length > 0 && (
-    <section class="wrap section">
-      <div class="section-head"><div><p class="eyebrow">Career</p><h2>Experience</h2></div></div>
-      <Timeline items={work} />
-    </section>
-  )}
+  <Marquee items={site.skills.flatMap((g) => g.items)} variant="plain" size="m" speed={40} />
 
-  {education.length > 0 && (
-    <section class="wrap section">
-      <div class="section-head"><div><p class="eyebrow">Learning</p><h2>Education & certifications</h2></div></div>
-      <Timeline items={education} />
-    </section>
-  )}
+  <section class="skills pad">
+    <div class="sec-head">
+      <span class="label"><span class="num">✦</span></span>
+      <span class="label">Toolbox</span>
+      <span class="label">{site.skills.reduce((n, g) => n + g.items.length, 0)} skills</span>
+    </div>
+    {
+      site.skills.map((g) => (
+        <div class="sk grid12">
+          <span class="label sk-g">{g.group}</span>
+          <p class="sk-items display" data-split>
+            {g.items.map((it, i) => (
+              <>
+                <span class="sk-i">{it}</span>
+                {i < g.items.length - 1 && <em class="serif sk-sep">/</em>}
+              </>
+            ))}
+          </p>
+        </div>
+      ))
+    }
+  </section>
 
-  {awards.length > 0 && (
-    <section class="wrap section">
-      <div class="section-head"><div><p class="eyebrow">Recognition</p><h2>Awards</h2></div></div>
-      <Timeline items={awards} />
-    </section>
-  )}
+  {
+    groups.map((g) => (
+      <section class="ledger pad">
+        <div class="sec-head">
+          <span class="label">
+            <span class="num">{g.n}</span>
+          </span>
+          <span class="label">{g.title}</span>
+          <span class="label">{g.items.length} entries</span>
+        </div>
+        <ol>
+          {g.items.map((e) => (
+            <li>
+              <details class="lg" name={g.title}>
+                <summary class="lg-row" data-cursor="Open">
+                  <span class="lg-years display">
+                    {year(e.data.start)}
+                    <span class="lg-dash">—</span>
+                    {year(e.data.end)}
+                  </span>
+                  <span class="lg-role">
+                    <strong class="display">{e.data.role}</strong>
+                    <span class="serif lg-org">{e.data.org}</span>
+                  </span>
+                  <span class="lg-loc mono">{e.data.location}</span>
+                  <span class="lg-plus" aria-hidden="true" />
+                </summary>
+                <div class="lg-body grid12">
+                  <div class="lg-when mono">
+                    {formatDate(e.data.start, { month: 'short', year: 'numeric' })} → {e.data.end ? formatDate(e.data.end, { month: 'short', year: 'numeric' }) : 'Present'}
+                    {e.data.orgUrl && (
+                      <a class="ulink" href={e.data.orgUrl} target="_blank" rel="noopener">
+                        Visit ↗
+                      </a>
+                    )}
+                  </div>
+                  <div class="lg-text">
+                    {e.data.summary && <p class="lg-sum">{e.data.summary}</p>}
+                    {e.data.highlights.length > 0 && (
+                      <ul>
+                        {e.data.highlights.map((h) => (
+                          <li>{h}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {e.data.tags.length > 0 && (
+                      <div class="tags">
+                        {e.data.tags.map((t) => (
+                          <span class="tag">{t}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </details>
+            </li>
+          ))}
+        </ol>
+      </section>
+    ))
+  }
+
+  <section class="a-cta pad">
+    <a class="pill solid" href={url('cv')} data-magnetic>Printable CV <span class="arr">↗</span></a>
+    {site.email && <a class="pill" href={`mailto:${site.email}`} data-magnetic>Email me <span class="arr">↗</span></a>}
+    {site.socials.filter((s) => s.url.startsWith('http')).map((s) => <a class="pill" href={s.url} target="_blank" rel="me noopener">{s.label} <span class="arr">↗</span></a>)}
+  </section>
 </Base>
 
+<script>
+  import { gsap, fine, reduced } from '../scripts/app';
+  // 3D tilt on the ID card
+  const card = document.querySelector<HTMLElement>('[data-tilt] .id-in');
+  if (card && fine && !reduced) {
+    const rx = gsap.quickTo(card, 'rotationX', { duration: 0.8, ease: 'power3' });
+    const ry = gsap.quickTo(card, 'rotationY', { duration: 0.8, ease: 'power3' });
+    card.parentElement!.addEventListener('pointermove', (e) => {
+      const r = card.getBoundingClientRect();
+      ry(((e.clientX - r.left) / r.width - 0.5) * 18);
+      rx(-((e.clientY - r.top) / r.height - 0.5) * 18);
+      card.style.setProperty('--gx', `${((e.clientX - r.left) / r.width) * 100}%`);
+      card.style.setProperty('--gy', `${((e.clientY - r.top) / r.height) * 100}%`);
+    });
+    card.parentElement!.addEventListener('pointerleave', () => (rx(0), ry(0)));
+  }
+  // Smooth accordion
+  document.querySelectorAll<HTMLDetailsElement>('.lg').forEach((d) => {
+    d.querySelector('summary')!.addEventListener('click', () => {
+      requestAnimationFrame(() => {
+        const body = d.querySelector('.lg-body');
+        if (d.open && body && !reduced) gsap.from(body, { height: 0, opacity: 0, duration: 0.7, ease: 'expo.out', clearProps: 'all' });
+        import('gsap/ScrollTrigger').then(({ ScrollTrigger }) => setTimeout(() => ScrollTrigger.refresh(), 750));
+      });
+    });
+  });
+</script>
+
 <style>
-  .intro {
+  .a-hero {
+    padding-top: calc(var(--header-h) + clamp(40px, 7vw, 100px));
+  }
+  .a-top {
+    padding-top: 12px;
+    border-top: 1px solid var(--rule-strong);
+  }
+  .a-top > :first-child {
+    grid-column: 1 / span 2;
+  }
+  .a-lab {
+    grid-column: 3 / -1;
+  }
+  .a-main {
+    margin-top: clamp(24px, 5vw, 72px);
+    align-items: end;
+    row-gap: 40px;
+  }
+  .a-title {
+    grid-column: 1 / span 8;
+    font-size: clamp(3.6rem, 12vw, 14rem);
+  }
+  .a-title .serif {
+    color: var(--ink);
+    background: var(--signal);
+    padding: 0 0.08em;
+    color: var(--signal-ink);
+  }
+  .idcard {
+    grid-column: 9 / -1;
+    perspective: 900px;
+  }
+  .id-in {
+    --gx: 50%;
+    --gy: 50%;
+    position: relative;
+    background: var(--night);
+    color: var(--bone);
+    border-radius: 14px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    transform-style: preserve-3d;
+    box-shadow: 0 40px 80px -30px rgb(0 0 0 / 0.55);
+    overflow: hidden;
+  }
+  .id-in::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at var(--gx) var(--gy), rgb(212 255 58 / 0.22), transparent 45%);
+    pointer-events: none;
+  }
+  .id-head,
+  .id-foot {
+    display: flex;
+    justify-content: space-between;
+    color: rgb(from var(--bone) r g b / 0.6);
+  }
+  .id-body {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 320px;
-    gap: 3rem;
+    grid-template-columns: auto 1fr;
+    gap: 18px;
     align-items: start;
   }
-  .prose :global(p:first-child) {
-    font-size: 1.3rem;
-    font-family: var(--font-display);
-    line-height: 1.45;
+  .id-mono {
+    font-size: 5.4rem;
+    color: var(--night);
+    background: var(--signal);
+    padding: 0.08em 0.1em 0;
+    border-radius: 6px;
+    line-height: 0.9;
   }
-  .side {
-    padding: 1.5rem;
+  .id-body dl {
+    display: grid;
+    gap: 8px;
+    font-size: 0.9rem;
+  }
+  .id-body dt {
+    color: rgb(from var(--bone) r g b / 0.5);
+  }
+  .id-code {
+    letter-spacing: 1px;
+    font-weight: 700;
+    overflow: hidden;
+    white-space: nowrap;
+    max-width: 50%;
+  }
+
+  .a-story {
+    margin-top: clamp(80px, 12vw, 180px);
+    align-items: start;
+    row-gap: 24px;
+  }
+  .a-sl {
+    grid-column: 1 / span 3;
     position: sticky;
-    top: 90px;
+    top: calc(var(--header-h) + 20px);
   }
-  dl {
-    display: grid;
-    grid-template-columns: 70px 1fr;
-    gap: 0.5rem 1rem;
-    margin: 1.2rem 0;
-    font-size: 0.93rem;
+  .a-prose {
+    grid-column: 4 / span 8;
+    max-width: none;
   }
-  dt {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    color: var(--ink-mute);
-    padding-top: 0.2rem;
+  .a-prose > :global(p:first-child) {
+    font-family: var(--f-body);
+    font-size: clamp(1.7rem, 3vw, 3rem);
+    line-height: 1.08;
+    letter-spacing: -0.035em;
+    font-weight: 450;
   }
-  dd {
-    margin: 0;
+  .a-prose > :global(blockquote) {
+    font-size: 1.2em;
   }
-  .side-cta {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    margin-bottom: 1.2rem;
-  }
+
   .skills {
+    margin-top: clamp(40px, 6vw, 96px);
+  }
+  .sk {
+    padding-block: 16px 24px;
+    border-bottom: 1px solid var(--rule);
+    align-items: baseline;
+  }
+  .sk-g {
+    grid-column: 1 / span 3;
+  }
+  .sk-items {
+    grid-column: 4 / -1;
+    font-size: clamp(2rem, 4.8vw, 5rem);
+    line-height: 0.95;
+  }
+  .sk-i {
+    transition: background 0.3s;
+  }
+  .sk-i:hover {
+    background: var(--signal);
+    color: var(--signal-ink);
+  }
+  .sk-sep {
+    color: var(--ink-3);
+    margin-inline: 0 0.22em;
+  }
+
+  .ledger {
+    margin-top: clamp(80px, 10vw, 150px);
+  }
+  .lg {
+    border-bottom: 1px solid var(--rule);
+  }
+  .lg-row {
+    list-style: none;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
-    gap: 1rem;
+    grid-template-columns: 22% 1fr 18% 40px;
+    gap: var(--gap);
+    align-items: center;
+    padding-block: 22px;
+    cursor: pointer;
   }
-  .skill {
-    padding: 1.4rem;
+  .lg-row::-webkit-details-marker {
+    display: none;
   }
+  .lg-years {
+    font-size: clamp(1.8rem, 3.4vw, 3.4rem);
+    font-variant-numeric: tabular-nums;
+  }
+  .lg-dash {
+    color: var(--ink-3);
+    margin-inline: 0.1em;
+  }
+  .lg-role {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .lg-role strong {
+    font-size: clamp(1.5rem, 2.4vw, 2.4rem);
+    font-weight: 700;
+  }
+  .lg-org {
+    font-size: clamp(1.2rem, 1.6vw, 1.5rem);
+    color: var(--ink-2);
+  }
+  .lg-loc {
+    color: var(--ink-3);
+  }
+  .lg-plus {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 50%;
+    justify-self: end;
+    transition: background 0.3s, transform 0.6s var(--ease-out);
+  }
+  .lg-plus::before,
+  .lg-plus::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 14px;
+    height: 1.5px;
+    background: currentColor;
+    translate: -50% -50%;
+  }
+  .lg-plus::after {
+    rotate: 90deg;
+  }
+  .lg[open] .lg-plus {
+    transform: rotate(135deg);
+    background: var(--signal);
+    color: var(--signal-ink);
+    border-color: var(--signal);
+  }
+  .lg-row:hover .lg-plus {
+    background: var(--signal);
+    color: var(--signal-ink);
+    border-color: var(--signal);
+  }
+  .lg-body {
+    padding-bottom: 28px;
+    overflow: hidden;
+  }
+  .lg-when {
+    grid-column: 1 / span 3;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: var(--ink-3);
+  }
+  .lg-text {
+    grid-column: 4 / span 7;
+    display: grid;
+    gap: 14px;
+  }
+  .lg-sum {
+    font-size: 1.15rem;
+  }
+  .lg-text ul {
+    display: grid;
+    gap: 6px;
+  }
+  .lg-text li {
+    padding-left: 1.6em;
+    position: relative;
+  }
+  .lg-text li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--ink-3);
+  }
+  .a-cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: clamp(56px, 8vw, 120px);
+  }
+
   @media (max-width: 900px) {
-    .intro {
-      grid-template-columns: 1fr;
+    .a-title,
+    .idcard,
+    .a-sl,
+    .a-prose,
+    .sk-g,
+    .sk-items,
+    .lg-when,
+    .lg-text {
+      grid-column: 1 / -1;
     }
-    .side {
+    .a-sl {
       position: static;
+    }
+    .lg-row {
+      grid-template-columns: 1fr 40px;
+    }
+    .lg-years {
+      grid-column: 1;
+    }
+    .lg-plus {
+      grid-row: 1;
+      grid-column: 2;
+    }
+    .lg-role,
+    .lg-loc {
+      grid-column: 1 / -1;
     }
   }
 </style>

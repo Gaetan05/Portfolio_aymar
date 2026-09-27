@@ -1,0 +1,173 @@
+---
+/**
+ * Generative cover art. Every project / entry gets a unique, deterministic
+ * duotone composition derived from its title — no images needed.
+ * Set `accent` in front-matter to force the background colour,
+ * or give the entry a real `cover` image to replace it.
+ */
+import { hash } from '../lib/content';
+
+interface Props {
+  seed: string;
+  label?: string;
+  accent?: string;
+  pattern?: number;
+  class?: string;
+  ratio?: string;
+}
+
+const { seed, label, accent, pattern, class: cls, ratio = '4 / 3' } = Astro.props;
+
+const W = 400;
+const H = 300;
+let s = hash(seed) || 1;
+const rnd = () => {
+  s |= 0;
+  s = (s + 0x6d2b79f5) | 0;
+  let t = Math.imul(s ^ (s >>> 15), 1 | s);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+};
+const pick = <T,>(a: T[]) => a[Math.floor(rnd() * a.length)];
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
+const PALETTES: [string, string][] = [
+  ['#d4ff3a', '#0f0f0d'],
+  ['#0f0f0d', '#d4ff3a'],
+  ['#2d3cff', '#ebe7dd'],
+  ['#ff5b24', '#0f0f0d'],
+  ['#c9b8ff', '#0f0f0d'],
+  ['#1e3b2f', '#d4ff3a'],
+  ['#ebe7dd', '#0f0f0d'],
+  ['#0f0f0d', '#ebe7dd'],
+];
+
+function contrastInk(hex: string) {
+  const m = hex.replace('#', '').match(/.{2}/g);
+  if (!m || m.length < 3) return '#0f0f0d';
+  const [r, g, b] = m.map((x) => parseInt(x, 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.5 ? '#0f0f0d' : '#ebe7dd';
+}
+
+let [bg, fg] = pick(PALETTES);
+if (accent && /^#[0-9a-f]{6}$/i.test(accent)) {
+  bg = accent;
+  fg = contrastInk(accent);
+}
+
+const kind = pattern ?? Math.floor(rnd() * 6);
+let body = '';
+
+switch (kind) {
+  case 0: {
+    // Topographic contours
+    const cx = W * (0.3 + rnd() * 0.4);
+    const cy = H * (0.3 + rnd() * 0.4);
+    const n = 14 + Math.floor(rnd() * 8);
+    for (let i = n; i > 0; i--) {
+      const r = i * (22 + rnd() * 4);
+      const pts: string[] = [];
+      const steps = 120;
+      const wob = 0.12 + rnd() * 0.06;
+      const ph = rnd() * 6.28;
+      for (let k = 0; k <= steps; k++) {
+        const a = (k / steps) * Math.PI * 2;
+        const rr = r * (1 + wob * Math.sin(a * 3 + ph + i * 0.3) + 0.05 * Math.cos(a * 5 + i));
+        pts.push(`${r2(cx + Math.cos(a) * rr)},${r2(cy + Math.sin(a) * rr * 0.8)}`);
+      }
+      body += `<polygon points="${pts.join(' ')}" fill="none" stroke="${fg}" stroke-width="${i % 5 === 0 ? 2.2 : 0.9}"/>`;
+    }
+    body += `<circle cx="${r2(cx)}" cy="${r2(cy)}" r="4" fill="${fg}"/>`;
+    break;
+  }
+  case 1: {
+    // Rotated stripes with an inverted disc
+    const ang = pick([0, 15, 30, 45, 60, 90, 120, 135]);
+    const gap = 10 + Math.floor(rnd() * 10);
+    const id = `c${hash(seed).toString(36)}`;
+    const cx = W * (0.35 + rnd() * 0.3);
+    const cy = H * (0.35 + rnd() * 0.3);
+    const r = 70 + rnd() * 50;
+    let lines = '';
+    for (let x = -W; x < W * 2; x += gap) lines += `<rect x="${x}" y="${-H}" width="${gap / 2}" height="${H * 3}"/>`;
+    body += `<defs><clipPath id="${id}"><circle cx="${r2(cx)}" cy="${r2(cy)}" r="${r2(r)}"/></clipPath></defs>`;
+    body += `<g fill="${fg}" transform="rotate(${ang} ${W / 2} ${H / 2})">${lines}</g>`;
+    body += `<g clip-path="url(#${id})"><rect width="${W}" height="${H}" fill="${fg}"/><g fill="${bg}" transform="rotate(${ang + 90} ${W / 2} ${H / 2})">${lines}</g></g>`;
+    break;
+  }
+  case 2: {
+    // Halftone dot field
+    const fx = rnd() * W;
+    const fy = rnd() * H;
+    const step = 16;
+    for (let x = step / 2; x < W; x += step)
+      for (let y = step / 2; y < H; y += step) {
+        const d = Math.hypot(x - fx, y - fy) / Math.hypot(W, H);
+        const r = Math.max(0, (1 - d * 1.6) * step * 0.52);
+        if (r > 0.4) body += `<circle cx="${x}" cy="${y}" r="${r2(r)}" fill="${fg}"/>`;
+      }
+    break;
+  }
+  case 3: {
+    // Giant glyph
+    const ch = (seed.trim()[0] || '*').toUpperCase().replace(/[&<>"']/g, '');
+    const italic = rnd() > 0.4;
+    body += `<text x="${W * 0.5}" y="${H * 0.86}" text-anchor="middle" font-family="${italic ? 'Instrument Serif, serif' : 'Bricolage Grotesque Variable, sans-serif'}" font-style="${italic ? 'italic' : 'normal'}" font-weight="${italic ? 400 : 800}" font-size="${H * 1.12}" fill="${fg}">${ch}</text>`;
+    const y = H * (0.15 + rnd() * 0.2);
+    body += `<rect x="0" y="${r2(y)}" width="${W}" height="1.5" fill="${fg}"/>`;
+    break;
+  }
+  case 4: {
+    // Truchet arcs
+    const t = 50;
+    let d = '';
+    for (let x = 0; x < W; x += t)
+      for (let y = 0; y < H; y += t) {
+        if (rnd() > 0.5) d += `M${x + t / 2},${y} A${t / 2},${t / 2} 0 0 0 ${x},${y + t / 2} M${x + t},${y + t / 2} A${t / 2},${t / 2} 0 0 0 ${x + t / 2},${y + t}`;
+        else d += `M${x + t / 2},${y} A${t / 2},${t / 2} 0 0 1 ${x + t},${y + t / 2} M${x},${y + t / 2} A${t / 2},${t / 2} 0 0 1 ${x + t / 2},${y + t}`;
+      }
+    body += `<path d="${d}" fill="none" stroke="${fg}" stroke-width="${pick([6, 10, 14])}" stroke-linecap="butt"/>`;
+    break;
+  }
+  default: {
+    // Bars / skyline
+    const n = 18 + Math.floor(rnd() * 14);
+    const w = W / n;
+    const ph = rnd() * 6;
+    for (let i = 0; i < n; i++) {
+      const h = H * (0.15 + 0.7 * Math.abs(Math.sin(i * 0.35 + ph)) * (0.6 + rnd() * 0.4));
+      body += `<rect x="${r2(i * w)}" y="${r2(H - h)}" width="${r2(w * 0.62)}" height="${r2(h)}" fill="${fg}"/>`;
+    }
+    body += `<circle cx="${r2(W * (0.15 + rnd() * 0.7))}" cy="${r2(H * 0.22)}" r="${r2(16 + rnd() * 18)}" fill="${fg}"/>`;
+  }
+}
+
+const svg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false"><rect width="${W}" height="${H}" fill="${bg}"/>${body}</svg>`;
+---
+
+<div class:list={['cover', cls]} style={`--ratio:${ratio};--cover-fg:${fg};--cover-bg:${bg}`}>
+  <Fragment set:html={svg} />
+  {label && <span class="cover-label mono">{label}</span>}
+</div>
+
+<style>
+  .cover {
+    position: relative;
+    aspect-ratio: var(--ratio);
+    overflow: hidden;
+    background: var(--cover-bg);
+  }
+  .cover :global(svg) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .cover-label {
+    position: absolute;
+    left: 12px;
+    top: 12px;
+    color: var(--cover-fg);
+    font-size: 0.65rem;
+  }
+</style>

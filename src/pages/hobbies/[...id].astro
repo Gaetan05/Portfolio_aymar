@@ -5,24 +5,27 @@ import { getHobbies, url } from '../../lib/content';
 
 export async function getStaticPaths() {
   const hobbies = await getHobbies();
-  return hobbies.map((h) => ({ params: { id: h.id }, props: { hobby: h } }));
+  return hobbies.map((h, i) => ({ params: { id: h.id }, props: { hobby: h, next: hobbies[(i + 1) % hobbies.length] } }));
 }
 
-const { hobby } = Astro.props;
+const { hobby, next } = Astro.props;
 const { Content, headings } = await render(hobby);
 const d = hobby.data;
 ---
 
 <Entry
-  title={`${d.icon} ${d.title}`}
+  title={d.title}
+  icon={d.icon}
   description={d.summary}
   eyebrow="Hobby"
   back={{ href: url('hobbies'), label: 'All hobbies' }}
-  meta={d.since ? [`Since ${d.since}`] : []}
+  specs={d.since ? [{ k: 'Since', v: d.since }] : []}
   tags={d.tags}
   cover={d.cover}
+  art={false}
   headings={headings}
   type="website"
+  next={next && next.id !== hobby.id ? { href: url(`hobbies/${next.id}`), title: next.data.title, label: 'Next obsession' } : undefined}
 >
   <Content />
 </Entry>

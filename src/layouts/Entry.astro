@@ -1,9 +1,9 @@
 ---
-/** Shared layout for a single project / journal entry / hobby page. */
-import type { MarkdownHeading } from 'astro';
+/** Shared editorial layout for a project, journal entry or hobby. */
+import type { MarkdownHeading, ImageMetadata } from 'astro';
 import { Image } from 'astro:assets';
-import type { ImageMetadata } from 'astro';
 import Base from './Base.astro';
+import Cover from '../components/Cover.astro';
 import { url, slugify } from '../lib/content';
 
 interface Props {
@@ -11,186 +11,313 @@ interface Props {
   description: string;
   eyebrow: string;
   back: { href: string; label: string };
-  meta?: string[];
+  /** Spec sheet shown under the title: [{ k: 'Year', v: '2026' }] */
+  specs?: { k: string; v: string }[];
   tags?: string[];
   cover?: ImageMetadata;
+  /** Seed/colour for the generative cover when there is no image. */
+  art?: { seed: string; accent?: string; pattern?: number } | false;
   headings?: MarkdownHeading[];
-  prev?: { href: string; title: string };
-  next?: { href: string; title: string };
+  next?: { href: string; title: string; label: string };
   type?: 'website' | 'article';
+  icon?: string;
 }
 
-const { title, description, eyebrow, back, meta = [], tags = [], cover, headings = [], prev, next, type = 'article' } = Astro.props;
-const toc = headings.filter((h) => h.depth <= 3);
+const { title, description, eyebrow, back, specs = [], tags = [], cover, art, headings = [], next, type = 'article', icon } = Astro.props;
+const toc = headings.filter((h) => h.depth === 2);
 ---
 
 <Base title={title} description={description} type={type}>
-  <article class="wrap entry">
-    <header class="head">
-      <a class="back meta no-print" href={back.href}>← {back.label}</a>
-      <p class="eyebrow">{eyebrow}</p>
-      <h1>{title}</h1>
-      <p class="lede">{description}</p>
-      {meta.length > 0 && <p class="meta line">{meta.join('  ·  ')}</p>}
-      <slot name="aside" />
+  <div class="progress no-print" data-progress aria-hidden="true"></div>
+
+  <article class="entry">
+    <header class="e-head pad">
+      <div class="e-top grid12">
+        <a class="mono e-back" href={back.href} data-intro>
+          <span class="roll"><span data-t={`← ${back.label}`}>← {back.label}</span></span>
+        </a>
+        <p class="label e-eyebrow" data-intro>{eyebrow}</p>
+      </div>
+      {icon && <span class="e-icon" data-intro>{icon}</span>}
+      <h1 class="display e-title" data-intro="lines">{title}</h1>
+      <div class="e-sub grid12">
+        <p class="e-desc" data-intro>{description}</p>
+        {
+          specs.length > 0 && (
+            <dl class="e-specs" data-intro>
+              {specs.map((s) => (
+                <div>
+                  <dt class="label">{s.k}</dt>
+                  <dd>{s.v}</dd>
+                </div>
+              ))}
+            </dl>
+          )
+        }
+      </div>
+      <slot name="actions" />
     </header>
 
-    {cover && <Image class="cover" src={cover} alt="" widths={[800, 1200, 1600]} sizes="(max-width: 1120px) 100vw, 1120px" />}
+    {
+      (cover || art) && (
+        <figure class="e-cover" data-unveil>
+          <div class="e-cover-in" data-parallax="0.12">
+            {cover ? (
+              <Image src={cover} alt="" widths={[800, 1400, 2000]} sizes="100vw" />
+            ) : (
+              art && <Cover seed={art.seed} accent={art.accent} pattern={art.pattern} ratio="21 / 9" />
+            )}
+          </div>
+        </figure>
+      )
+    }
 
-    <div class:list={['layout', { 'has-toc': toc.length > 2 }]}>
-      {
-        toc.length > 2 && (
-          <nav class="toc no-print" aria-label="On this page">
-            <p class="eyebrow">On this page</p>
-            <ul>
-              {toc.map((h) => (
-                <li class={`d${h.depth}`}>
-                  <a href={`#${h.slug}`}>{h.text}</a>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        )
-      }
-      <div class="prose">
+    <div class="e-body pad grid12">
+      <aside class="e-aside no-print">
+        {
+          toc.length > 1 && (
+            <nav class="toc" aria-label="On this page">
+              <p class="label">Contents</p>
+              <ol>
+                {toc.map((h, i) => (
+                  <li>
+                    <a href={`#${h.slug}`}>
+                      <span class="mono">{String(i + 1).padStart(2, '0')}</span>
+                      <span class="ulink">{h.text}</span>
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          )
+        }
+      </aside>
+      <div class="prose e-prose">
         <slot />
       </div>
     </div>
 
     {
       tags.length > 0 && (
-        <div class="chips tags">
-          {tags.map((t) => (
-            <a class="chip" href={url(`tags/${slugify(t)}`)}>
-              #{t}
-            </a>
-          ))}
+        <div class="e-tags pad grid12">
+          <p class="label">Filed under</p>
+          <div class="tags">
+            {tags.map((t) => (
+              <a class="tag" href={url(`tags/${slugify(t)}`)}>
+                #{t}
+              </a>
+            ))}
+          </div>
         </div>
       )
     }
 
     {
-      (prev || next) && (
-        <nav class="pager no-print" aria-label="More">
-          {prev ? (
-            <a class="card" href={prev.href}>
-              <span class="meta">← Newer</span>
-              <strong>{prev.title}</strong>
-            </a>
-          ) : (
-            <span />
-          )}
-          {next && (
-            <a class="card right" href={next.href}>
-              <span class="meta">Older →</span>
-              <strong>{next.title}</strong>
-            </a>
-          )}
-        </nav>
+      next && (
+        <a class="e-next pad no-print" href={next.href} data-cursor="Next">
+          <span class="label">{next.label}</span>
+          <span class="display e-next-title">{next.title}</span>
+          <span class="e-next-arr display">→</span>
+        </a>
       )
     }
   </article>
 </Base>
 
 <style>
-  .entry {
-    padding-bottom: 60px;
+  .progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--signal);
+    transform: scaleX(0);
+    transform-origin: left;
+    z-index: 1000;
   }
-  .head {
-    padding-top: clamp(40px, 7vw, 88px);
-    padding-bottom: 2.5rem;
-    max-width: 860px;
+  .e-head {
+    padding-top: calc(var(--header-h) + clamp(28px, 5vw, 72px));
   }
-  .back {
+  .e-top {
+    padding-top: 12px;
+    border-top: 1px solid var(--rule-strong);
+  }
+  .e-back {
+    grid-column: 1 / span 4;
+  }
+  .e-eyebrow {
+    grid-column: 5 / -1;
+  }
+  .e-icon {
     display: block;
-    width: fit-content;
-    text-decoration: none;
-    margin-bottom: 2rem;
+    font-size: clamp(3rem, 7vw, 6rem);
+    margin-top: clamp(24px, 4vw, 56px);
+    line-height: 1;
   }
-  h1 {
-    margin-top: 0.35em;
-    view-transition-name: entry-title;
+  .e-title {
+    font-size: clamp(3rem, 10.5vw, 12rem);
+    margin-top: clamp(24px, 4vw, 56px);
+    text-wrap: balance;
+    hyphens: auto;
+    overflow-wrap: anywhere;
   }
-  .lede {
-    font-size: clamp(1.1rem, 2.2vw, 1.35rem);
-    color: var(--ink-soft);
-    max-width: 60ch;
+  .e-sub {
+    margin-top: clamp(28px, 4vw, 56px);
+    padding-top: 14px;
+    border-top: 1px solid var(--rule-strong);
+    row-gap: 24px;
+    align-items: start;
   }
-  .line {
-    margin-top: 1.2rem;
+  .e-desc {
+    grid-column: 1 / span 6;
+    font-family: var(--f-serif);
+    font-style: italic;
+    font-size: clamp(1.5rem, 2.6vw, 2.5rem);
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    text-wrap: pretty;
   }
-  .cover {
-    width: 100%;
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--line);
-    margin-bottom: 3rem;
-  }
-  .layout.has-toc {
+  .e-specs {
+    grid-column: 8 / -1;
     display: grid;
-    grid-template-columns: 220px minmax(0, 1fr);
-    gap: 3rem;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px var(--gap);
   }
-  .toc {
+  .e-specs dd {
+    margin-top: 4px;
+    font-size: 0.98rem;
+  }
+  .e-cover {
+    margin-top: clamp(40px, 6vw, 96px);
+    overflow: hidden;
+    height: min(62vw, 86vh);
+  }
+  .e-cover-in {
+    height: 118%;
+    margin-top: -9%;
+  }
+  .e-cover-in :global(.cover),
+  .e-cover-in :global(img) {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: auto;
+    object-fit: cover;
+  }
+  .e-body {
+    margin-top: clamp(56px, 8vw, 120px);
+    align-items: start;
+  }
+  .e-aside {
+    grid-column: 1 / span 3;
     position: sticky;
-    top: 100px;
-    align-self: start;
-    font-size: 0.88rem;
+    top: calc(var(--header-h) + 20px);
   }
-  .toc ul {
-    list-style: none;
-    padding: 0;
-    margin: 0.8rem 0 0;
-    border-left: 1px solid var(--line);
-  }
-  .toc li {
-    padding: 0.25rem 0 0.25rem 0.9rem;
-  }
-  .toc li.d3 {
-    padding-left: 1.7rem;
+  .toc ol {
+    margin-top: 12px;
+    border-top: 1px solid var(--rule);
   }
   .toc a {
-    text-decoration: none;
-    color: var(--ink-soft);
-  }
-  .tags {
-    margin-top: 3rem;
-  }
-  .pager {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    margin-top: 3rem;
-  }
-  .pager a {
-    padding: 1.2rem 1.4rem;
-    text-decoration: none;
     display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
+    gap: 1em;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.92rem;
   }
-  .pager a:hover {
-    border-color: var(--accent);
+  .toc .mono {
+    color: var(--ink-3);
+    font-size: 0.7rem;
+    padding-top: 0.25em;
   }
-  .pager .right {
-    text-align: right;
-    grid-column: 2;
+  .e-prose {
+    grid-column: 4 / span 7;
   }
-  .pager strong {
-    font-family: var(--font-display);
-    font-size: 1.1rem;
+  .e-prose > :global(p:first-child) {
+    display: flow-root;
+  }
+  .e-prose > :global(p:first-child::first-letter) {
+    font-family: var(--f-display);
+    font-stretch: 75%;
+    font-weight: 800;
+    float: left;
+    font-size: 5.4em;
+    line-height: 0.78;
+    padding: 0.06em 0.1em 0 0;
+    text-transform: uppercase;
+  }
+  .e-tags {
+    margin-top: clamp(48px, 7vw, 100px);
+    padding-top: 14px;
+    align-items: baseline;
+  }
+  .e-tags .label {
+    grid-column: 1 / span 3;
+    border-top: 1px solid var(--rule-strong);
+    padding-top: 12px;
+  }
+  .e-tags .tags {
+    grid-column: 4 / -1;
+    border-top: 1px solid var(--rule-strong);
+    padding-top: 12px;
+  }
+  .e-next {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 12px 24px;
+    margin-top: clamp(80px, 12vw, 180px);
+    padding-block: 18px 0;
+    border-top: 1px solid var(--rule-strong);
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+  }
+  .e-next::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--signal);
+    z-index: -1;
+    transform: translateY(101%);
+    transition: transform 0.8s var(--ease-out);
+  }
+  .e-next:hover::before {
+    transform: none;
+  }
+  .e-next:hover {
+    color: var(--signal-ink);
+  }
+  .e-next .label {
+    grid-column: 1 / -1;
+    color: inherit;
+    opacity: 0.6;
+  }
+  .e-next-title {
+    font-size: clamp(2.8rem, 9vw, 10rem);
+    padding-bottom: 0.08em;
+  }
+  .e-next-arr {
+    font-size: clamp(2.8rem, 9vw, 10rem);
+    transition: transform 0.8s var(--ease-out);
+  }
+  .e-next:hover .e-next-arr {
+    transform: translateX(0.15em) rotate(-45deg);
   }
   @media (max-width: 900px) {
-    .layout.has-toc {
-      grid-template-columns: 1fr;
+    .e-desc,
+    .e-specs,
+    .e-prose {
+      grid-column: 1 / -1;
     }
-    .toc {
+    .e-aside {
       display: none;
     }
-    .pager {
-      grid-template-columns: 1fr;
+    .e-tags .label {
+      grid-column: 1 / -1;
     }
-    .pager .right {
-      grid-column: auto;
+    .e-tags .tags {
+      grid-column: 1 / -1;
+      border-top: 0;
     }
   }
 </style>

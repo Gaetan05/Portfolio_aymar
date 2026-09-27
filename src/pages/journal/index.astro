@@ -1,14 +1,13 @@
 ---
 import Base from '../../layouts/Base.astro';
-import JournalItem from '../../components/JournalItem.astro';
+import PageHero from '../../components/PageHero.astro';
 import FilterBar from '../../components/FilterBar.astro';
-import { getJournal, kindLabel, url } from '../../lib/content';
+import { getJournal, kindLabel, url, formatDate, readingTime } from '../../lib/content';
 
 const entries = await getJournal();
 const kinds = (Object.keys(kindLabel) as (keyof typeof kindLabel)[])
   .map((k) => ({ key: k, label: kindLabel[k], count: entries.filter((e) => e.data.kind === k).length }))
   .filter((o) => o.count > 0);
-
 const byYear = new Map<number, typeof entries>();
 entries.forEach((e) => {
   const y = e.data.date.getUTCFullYear();
@@ -17,53 +16,150 @@ entries.forEach((e) => {
 ---
 
 <Base title="Journal" description="Essays, notes, discoveries and things I learned — written in public.">
-  <section class="wrap page-head">
-    <p class="eyebrow">Learning in public</p>
-    <h1>Journal</h1>
-    <p class="lede">
-      Essays, quick notes, discoveries and “today I learned” moments. A running log of what catches my attention. Subscribe via <a
-        href={url('rss.xml')}>RSS</a
-      >.
-    </p>
-  </section>
-  <section class="wrap" id="journal-list">
-    <FilterBar target="#journal-list" options={kinds} />
+  <PageHero
+    index="03"
+    label="Learning in public"
+    title="Jour"
+    italic="nal"
+    count={entries.length}
+    intro="Essays, quick notes, discoveries and “today I learned” moments. A running log of whatever caught my attention — also available by RSS."
+  >
+    <FilterBar target="#journal" options={kinds} />
+  </PageHero>
+
+  <section id="journal" class="pad">
     {
       [...byYear].map(([year, list]) => (
-        <div class="year" data-filter-group>
-          <h2 class="y">{year}</h2>
-          <ul>
+        <div class="year grid12" data-filter-group>
+          <h2 class="y display">{year}</h2>
+          <ol class="entries">
             {list.map((e) => (
-              <JournalItem entry={e} />
+              <li data-filter-item data-filter-keys={[e.data.kind, ...e.data.tags].join('|')}>
+                <a class="row" href={url(`journal/${e.id}`)} data-cursor="Read">
+                  <span class="r-date mono">{formatDate(e.data.date, { day: '2-digit', month: 'short' })}</span>
+                  <span class:list={['r-kind mono', e.data.kind]}>{kindLabel[e.data.kind]}</span>
+                  <span class="r-main">
+                    <span class="r-title display">{e.data.title}</span>
+                    <span class="r-desc">{e.data.description}</span>
+                  </span>
+                  <span class="r-rt mono">{readingTime(e.body)}′</span>
+                </a>
+              </li>
             ))}
-          </ul>
+          </ol>
         </div>
       ))
     }
+    <a class="rss mono" href={url('rss.xml')}>
+      <span class="roll"><span data-t="Subscribe via RSS ↗">Subscribe via RSS ↗</span></span>
+    </a>
   </section>
 </Base>
 
 <style>
   .year {
-    display: grid;
-    grid-template-columns: 120px 1fr;
-    gap: 1rem;
-    margin-bottom: 2rem;
+    border-top: 1px solid var(--rule-strong);
+    align-items: start;
+  }
+  .year + .year {
+    margin-top: clamp(40px, 6vw, 80px);
   }
   .y {
-    font-size: 1.1rem;
-    font-family: var(--font-mono);
-    color: var(--ink-mute);
-    padding-top: 1.6rem;
-    margin: 0;
+    grid-column: 1 / span 3;
+    font-size: clamp(3rem, 8vw, 8rem);
+    position: sticky;
+    top: calc(var(--header-h) + 8px);
+    padding-top: 12px;
+    -webkit-text-stroke: 1.5px var(--ink);
+    color: transparent;
   }
-  ul {
-    margin: 0;
-    padding: 0;
+  .entries {
+    grid-column: 4 / -1;
   }
-  @media (max-width: 760px) {
-    .year {
-      grid-template-columns: 1fr;
+  .row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 5.5em 7em 1fr 3em;
+    gap: var(--gap);
+    align-items: baseline;
+    padding: 22px 0 24px;
+    border-bottom: 1px solid var(--rule);
+    isolation: isolate;
+  }
+  .row::before {
+    content: '';
+    position: absolute;
+    inset: 0 calc(var(--pad) * -1) 0 -12px;
+    background: var(--signal);
+    z-index: -1;
+    clip-path: inset(0 100% 0 0);
+    transition: clip-path 0.7s var(--ease-out);
+  }
+  .row:hover::before {
+    clip-path: inset(0 0 0 0);
+  }
+  .row:hover {
+    color: var(--signal-ink);
+  }
+  .r-date,
+  .r-rt {
+    color: inherit;
+    opacity: 0.6;
+  }
+  .r-kind {
+    justify-self: start;
+    padding: 0.2em 0.5em;
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    font-size: 0.64rem;
+  }
+  .r-kind.discovery,
+  .r-kind.til {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+  .r-main {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .r-title {
+    font-size: clamp(1.8rem, 3.4vw, 3.4rem);
+    line-height: 0.9;
+  }
+  .r-desc {
+    color: inherit;
+    opacity: 0.75;
+    max-width: 56ch;
+  }
+  .r-rt {
+    text-align: right;
+  }
+  .rss {
+    display: inline-block;
+    margin-top: 48px;
+  }
+  @media (max-width: 900px) {
+    .y {
+      grid-column: 1 / -1;
+      position: static;
+    }
+    .entries {
+      grid-column: 1 / -1;
+    }
+    .row {
+      grid-template-columns: auto 1fr;
+      row-gap: 10px;
+    }
+    .r-kind {
+      justify-self: end;
+    }
+    .r-main {
+      grid-column: 1 / -1;
+    }
+    .r-rt {
+      display: none;
     }
   }
 </style>

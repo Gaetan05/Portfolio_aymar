@@ -1,29 +1,316 @@
 ---
 import Base from '../../layouts/Base.astro';
-import ProjectCard from '../../components/ProjectCard.astro';
+import PageHero from '../../components/PageHero.astro';
 import FilterBar from '../../components/FilterBar.astro';
-import { getProjects, statusLabel } from '../../lib/content';
+import Cover from '../../components/Cover.astro';
+import { getProjects, statusLabel, url } from '../../lib/content';
 
 const projects = await getProjects();
-const count = (fn: (p: (typeof projects)[number]) => boolean) => projects.filter(fn).length;
 const statuses = (Object.keys(statusLabel) as (keyof typeof statusLabel)[])
-  .map((s) => ({ key: s, label: statusLabel[s], count: count((p) => p.data.status === s) }))
+  .map((s) => ({ key: s, label: statusLabel[s], count: projects.filter((p) => p.data.status === s).length }))
   .filter((o) => o.count > 0);
 const stackCounts = new Map<string, number>();
 projects.forEach((p) => p.data.stack.forEach((s) => stackCounts.set(s, (stackCounts.get(s) ?? 0) + 1)));
-const stacks = [...stackCounts].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([key, n]) => ({ key, label: key, count: n }));
+const stacks = [...stackCounts].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([key, count]) => ({ key, label: key, count }));
 ---
 
 <Base title="Projects" description="Things I've built, shipped, explored and sometimes abandoned.">
-  <section class="wrap page-head">
-    <p class="eyebrow">Work & side projects</p>
-    <h1>Projects</h1>
-    <p class="lede">Things I’ve built, shipped, explored — and sometimes abandoned. Each one taught me something.</p>
-  </section>
-  <section class="wrap" id="project-grid">
-    <FilterBar target="#project-grid" options={[...statuses, ...stacks]} />
-    <div class="grid">
-      {projects.map((p) => <ProjectCard project={p} />)}
+  <PageHero
+    index="02"
+    label="Work & side projects"
+    title="Pro"
+    italic="jects"
+    count={projects.length}
+    intro="Things I’ve built, shipped, explored — and sometimes abandoned. Each one taught me something worth keeping."
+  >
+    <div class="bar">
+      <FilterBar target="#projects" options={[...statuses, ...stacks]} />
+      <div class="view mono" role="group" aria-label="Layout">
+        <button type="button" data-view="list" aria-pressed="true">List</button>
+        <button type="button" data-view="grid" aria-pressed="false">Grid</button>
+      </div>
     </div>
+  </PageHero>
+
+  <section id="projects" class="pad" data-view-root="list">
+    <ol class="plist">
+      <li class="phead mono label" aria-hidden="true">
+        <span>N°</span><span>Project</span><span>Stack</span><span>Status</span><span>Year</span>
+      </li>
+      {
+        projects.map((p, i) => (
+          <li data-filter-item data-filter-keys={[p.data.status, ...p.data.stack].join('|')}>
+            <a class="prow" href={url(`projects/${p.id}`)} data-preview={i} data-cursor="View">
+              <span class="p-n mono">{String(i + 1).padStart(2, '0')}</span>
+              <span class="p-cover">
+                <Cover seed={p.data.title} accent={p.data.accent} ratio="4 / 3" />
+              </span>
+              <span class="p-title display">{p.data.title}</span>
+              <span class="p-stack mono">{p.data.stack.slice(0, 3).join(' · ')}</span>
+              <span class="p-status mono">
+                <i class:list={['dot', p.data.status]} />
+                {statusLabel[p.data.status]}
+              </span>
+              <span class="p-year mono">{p.data.date.getUTCFullYear()}</span>
+              <span class="p-sum">{p.data.summary}</span>
+            </a>
+          </li>
+        ))
+      }
+    </ol>
   </section>
+
+  <div class="preview no-print" aria-hidden="true">
+    <div class="preview-inner">
+      {projects.map((p) => <Cover seed={p.data.title} accent={p.data.accent} ratio="4 / 3" />)}
+    </div>
+  </div>
 </Base>
+
+<script>
+  import { gsap, fine, reduced } from '../../scripts/app';
+
+  // List / grid toggle, remembered per visitor
+  const root = document.querySelector<HTMLElement>('[data-view-root]')!;
+  const btns = [...document.querySelectorAll<HTMLButtonElement>('[data-view]')];
+  const setView = (v: string) => {
+    root.dataset.viewRoot = v;
+    btns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === v)));
+    try {
+      localStorage.setItem('projects-view', v);
+    } catch {}
+  };
+  try {
+    const saved = localStorage.getItem('projects-view');
+    if (saved) setView(saved);
+  } catch {}
+  btns.forEach((b) =>
+    b.addEventListener('click', () => {
+      setView(b.dataset.view!);
+      gsap.fromTo('.prow', { opacity: 0, y: 30 }, { opacity: 1, y: 0, stagger: 0.04, duration: 0.8, ease: 'expo.out', clearProps: 'all' });
+    }),
+  );
+
+  // Floating cover preview that follows the cursor (list view)
+  if (fine && !reduced) {
+    const preview = document.querySelector<HTMLElement>('.preview')!;
+    const inner = preview.querySelector<HTMLElement>('.preview-inner')!;
+    const xTo = gsap.quickTo(preview, 'x', { duration: 0.7, ease: 'power3' });
+    const yTo = gsap.quickTo(preview, 'y', { duration: 0.7, ease: 'power3' });
+    const rTo = gsap.quickTo(preview, 'rotate', { duration: 0.9, ease: 'power3' });
+    let lastX = 0;
+    window.addEventListener('pointermove', (e) => {
+      xTo(e.clientX);
+      yTo(e.clientY);
+      rTo(gsap.utils.clamp(-12, 12, (e.clientX - lastX) * 0.6));
+      lastX = e.clientX;
+    });
+    document.querySelectorAll<HTMLElement>('.prow').forEach((row) => {
+      row.addEventListener('pointerenter', () => {
+        if (root.dataset.viewRoot !== 'list') return;
+        gsap.to(inner, { yPercent: -100 * Number(row.dataset.preview), duration: 0.8, ease: 'expo.out' });
+        gsap.to(preview, { scale: 1, opacity: 1, duration: 0.5, ease: 'expo.out' });
+      });
+      row.addEventListener('pointerleave', () => gsap.to(preview, { scale: 0.6, opacity: 0, duration: 0.4, ease: 'expo.out' }));
+    });
+  }
+</script>
+
+<style>
+  .bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .view {
+    display: inline-flex;
+    border: 1px solid var(--rule-strong);
+    border-radius: 999px;
+    padding: 3px;
+  }
+  .view button {
+    padding: 0.6em 1em;
+    border-radius: 999px;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+  }
+  .view button[aria-pressed='true'] {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  /* ── List view ── */
+  .plist {
+    margin-top: 24px;
+  }
+  .phead {
+    display: grid;
+    grid-template-columns: 5% 1fr 18% 12% 7%;
+    gap: var(--gap);
+    padding-bottom: 10px;
+  }
+  .prow {
+    display: grid;
+    grid-template-columns: 5% 1fr 18% 12% 7%;
+    gap: var(--gap);
+    align-items: center;
+    padding-block: clamp(16px, 2vw, 28px);
+    border-top: 1px solid var(--rule-strong);
+    transition: color 0.4s, padding 0.6s var(--ease-out);
+  }
+  li:last-child .prow {
+    border-bottom: 1px solid var(--rule-strong);
+  }
+  .p-cover,
+  .p-sum {
+    display: none;
+  }
+  .p-title {
+    font-size: clamp(2.2rem, 6.4vw, 7rem);
+    transition: transform 0.7s var(--ease-out), letter-spacing 0.7s var(--ease-out);
+  }
+  .prow:hover .p-title {
+    transform: translateX(0.12em);
+    font-family: var(--f-serif);
+    font-style: italic;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: -0.02em;
+  }
+  .plist:hover .prow:not(:hover) {
+    color: var(--ink-3);
+  }
+  .p-stack,
+  .p-status,
+  .p-year {
+    color: var(--ink-2);
+  }
+  .plist:hover .prow:not(:hover) :is(.p-stack, .p-status, .p-year) {
+    color: var(--ink-3);
+  }
+  .p-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6em;
+  }
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1px solid currentColor;
+  }
+  .dot.shipped {
+    background: var(--signal);
+    border-color: var(--ink);
+  }
+  .dot.in-progress {
+    background: linear-gradient(90deg, currentColor 50%, transparent 50%);
+  }
+
+  /* ── Grid view ── */
+  [data-view-root='grid'] .plist {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));
+    gap: clamp(28px, 3vw, 48px) var(--gap);
+  }
+  [data-view-root='grid'] .phead {
+    display: none;
+  }
+  [data-view-root='grid'] .prow {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    border: 0;
+    padding: 0;
+  }
+  [data-view-root='grid'] li:last-child .prow {
+    border: 0;
+  }
+  [data-view-root='grid'] .p-cover {
+    display: block;
+    overflow: hidden;
+    order: -1;
+  }
+  [data-view-root='grid'] .p-cover :global(svg) {
+    transition: transform 1s var(--ease-out);
+  }
+  [data-view-root='grid'] .prow:hover .p-cover :global(svg) {
+    transform: scale(1.06);
+  }
+  [data-view-root='grid'] .p-n {
+    order: 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--rule-strong);
+  }
+  [data-view-root='grid'] .p-title {
+    font-size: clamp(2rem, 3vw, 3rem);
+  }
+  [data-view-root='grid'] .p-sum {
+    display: block;
+    color: var(--ink-2);
+  }
+  [data-view-root='grid'] .p-stack,
+  [data-view-root='grid'] .p-year {
+    display: none;
+  }
+  [data-view-root='grid'] .prow:hover .p-title {
+    transform: none;
+  }
+
+  /* ── Cursor preview ── */
+  .preview {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: clamp(260px, 24vw, 400px);
+    aspect-ratio: 4 / 3;
+    margin: calc(clamp(260px, 24vw, 400px) * -0.375) 0 0 calc(clamp(260px, 24vw, 400px) * -0.5);
+    pointer-events: none;
+    z-index: 800;
+    overflow: hidden;
+    opacity: 0;
+    transform: scale(0.6);
+    border-radius: 2px;
+  }
+  .preview-inner {
+    display: flex;
+    flex-direction: column;
+  }
+  .preview-inner > :global(.cover) {
+    flex-shrink: 0;
+    width: 100%;
+  }
+
+  @media (max-width: 900px) {
+    .phead {
+      display: none;
+    }
+    .prow {
+      grid-template-columns: auto 1fr;
+      row-gap: 8px;
+    }
+    .p-n {
+      grid-row: 1;
+    }
+    .p-title {
+      grid-column: 1 / -1;
+    }
+    .p-stack {
+      display: none;
+    }
+    .p-year {
+      justify-self: end;
+      grid-row: 1;
+      grid-column: 2;
+    }
+    .p-status {
+      grid-column: 1 / -1;
+    }
+    .preview {
+      display: none;
+    }
+  }
+</style>

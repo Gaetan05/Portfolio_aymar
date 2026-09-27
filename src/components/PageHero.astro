@@ -1,0 +1,77 @@
+---
+interface Props {
+  index: string;
+  label: string;
+  title: string;
+  /** Word(s) of the title to set in italic serif. */
+  italic?: string;
+  count?: number;
+  intro?: string;
+}
+const { index, label, title, italic, count, intro } = Astro.props;
+---
+
+<header class="page-hero pad">
+  <div class="ph-top grid12">
+    <span class="label" data-intro><span class="num">{index}</span></span>
+    <span class="label ph-label" data-intro>{label}</span>
+    {count !== undefined && <span class="label ph-count" data-intro>{String(count).padStart(2, '0')} entries</span>}
+  </div>
+  <h1 class="display ph-title" data-intro="lines">
+    {title}{italic && <em class="serif">{italic}</em>}{count !== undefined && <sup class="ph-sup mono">{count}</sup>}
+  </h1>
+  <div class="meta-row grid12">
+    <span class="label" data-intro>About this section</span>
+    {intro && <p class="intro" data-intro>{intro}</p>}
+    <div class="ph-slot" data-intro><slot /></div>
+  </div>
+</header>
+
+<style>
+  .ph-top {
+    padding-top: 12px;
+    border-top: 1px solid var(--rule-strong);
+  }
+  .ph-top > :first-child {
+    grid-column: 1 / span 2;
+  }
+  .ph-label {
+    grid-column: 3 / span 6;
+  }
+  .ph-count {
+    grid-column: 10 / -1;
+    justify-self: end;
+  }
+  .ph-title {
+    margin-top: clamp(24px, 5vw, 72px);
+    font-size: var(--t-mega);
+    line-height: 0.8;
+  }
+  .ph-title .serif {
+    margin-left: 0.02em;
+  }
+  .ph-sup {
+    font-size: 0.8rem;
+    vertical-align: top;
+    margin-left: 0.4em;
+    position: relative;
+    top: 1.4em;
+    color: var(--ink-3);
+    letter-spacing: 0;
+  }
+  .meta-row > .label {
+    grid-column: 1 / span 4;
+  }
+  .ph-slot {
+    grid-column: 1 / -1;
+    margin-top: 28px;
+  }
+  .ph-slot:empty {
+    display: none;
+  }
+  @media (max-width: 900px) {
+    .ph-title {
+      font-size: clamp(3.4rem, 19vw, 8rem);
+    }
+  }
+</style>

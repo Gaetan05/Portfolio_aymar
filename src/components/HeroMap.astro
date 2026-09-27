@@ -1,0 +1,159 @@
+---
+/** WebGL2 topographic contour field. Lights up in the signal colour around the cursor. */
+---
+
+<canvas class="heromap" aria-hidden="true"></canvas>
+
+<script>
+  const canvas = document.querySelector<HTMLCanvasElement>('.heromap')!;
+  const gl = canvas.getContext('webgl2', { antialias: false, premultipliedAlpha: false });
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const VERT = `#version 300 es
+  in vec2 p; void main(){ gl_Position = vec4(p,0.,1.); }`;
+
+  const FRAG = `#version 300 es
+  precision highp float;
+  uniform vec2 uRes; uniform float uTime; uniform vec2 uMouse; uniform float uHover;
+  uniform vec3 uBg; uniform vec3 uFg; uniform vec3 uSig;
+  out vec4 o;
+  float h21(vec2 p){ p=fract(p*vec2(123.34,456.21)); p+=dot(p,p+45.32); return fract(p.x*p.y); }
+  float noise(vec2 p){ vec2 i=floor(p), f=fract(p); vec2 u=f*f*(3.-2.*f);
+    return mix(mix(h21(i),h21(i+vec2(1,0)),u.x), mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),u.x), u.y); }
+  float fbm(vec2 p){ float v=0., a=.5; for(int i=0;i<5;i++){ v+=a*noise(p); p=p*2.03+vec2(1.7,9.2); a*=.5; } return v; }
+  void main(){
+    vec2 p = (gl_FragCoord.xy - .5*uRes) / uRes.y;
+    vec2 m = (uMouse - .5*uRes) / uRes.y;
+    float d = length(p - m);
+    vec2 q = p*1.35 + vec2(0., uTime*.025);
+    vec2 w = vec2(fbm(q + uTime*.018), fbm(q + vec2(5.2,1.3) - uTime*.012));
+    float h = fbm(q + 1.6*w);
+    h += .28 * exp(-d*d*7.) * uHover;          // cursor raises a hill
+    float n = 26.;
+    float v = h*n;
+    float fw = fwidth(v);
+    float f = fract(v);
+    float line = 1. - smoothstep(0., fw*1.25, min(f, 1.-f));
+    float band = floor(v + .5);
+    float major = step(mod(band, 5.), .5);
+    vec3 col = uBg;
+    col = mix(col, uFg, line * mix(.2, .6, major));
+    // signal glow: alternate bands fill near cursor
+    float glow = smoothstep(.42, .0, d) * uHover;
+    float alt = step(1., mod(floor(v), 2.));
+    col = mix(col, uSig, glow * alt * .92);
+    col = mix(col, uFg, glow * line * .9);
+    // soft vignette toward bottom so text stays legible
+    float vig = smoothstep(.0, .9, gl_FragCoord.y / uRes.y);
+    col = mix(uBg, col, .55 + .45*vig);
+    o = vec4(col, 1.);
+  }`;
+
+  function hexToRgb(v: string) {
+    const c = document.createElement('canvas').getContext('2d')!;
+    c.fillStyle = v.trim();
+    const hx = c.fillStyle as string;
+    if (hx.startsWith('#')) return [1, 3, 5].map((i) => parseInt(hx.slice(i, i + 2), 16) / 255);
+    const m = hx.match(/[\d.]+/g) || ['0', '0', '0'];
+    return m.slice(0, 3).map((x) => Number(x) / 255);
+  }
+
+  if (gl) {
+    const sh = (type: number, src: string) => {
+      const s = gl.createShader(type)!;
+      gl.shaderSource(s, src);
+      gl.compileShader(s);
+      if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) console.warn(gl.getShaderInfoLog(s));
+      return s;
+    };
+    const prog = gl.createProgram()!;
+    gl.attachShader(prog, sh(gl.VERTEX_SHADER, VERT));
+    gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FRAG));
+    gl.linkProgram(prog);
+    gl.useProgram(prog);
+    const buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    const loc = gl.getAttribLocation(prog, 'p');
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    const U = (n: string) => gl.getUniformLocation(prog, n);
+    const uRes = U('uRes'), uTime = U('uTime'), uMouse = U('uMouse'), uHover = U('uHover');
+    const uBg = U('uBg'), uFg = U('uFg'), uSig = U('uSig');
+
+    const setColors = () => {
+      const cs = getComputedStyle(document.documentElement);
+      gl.uniform3fv(uBg, hexToRgb(cs.getPropertyValue('--paper')));
+      gl.uniform3fv(uFg, hexToRgb(cs.getPropertyValue('--ink')));
+      gl.uniform3fv(uSig, hexToRgb(cs.getPropertyValue('--signal')));
+    };
+    setColors();
+    window.addEventListener('themechange', () => {
+      setColors();
+      if (reduced) draw(0);
+    });
+
+    let dpr = 1;
+    const resize = () => {
+      dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      const r = canvas.getBoundingClientRect();
+      canvas.width = Math.max(1, Math.round(r.width * dpr));
+      canvas.height = Math.max(1, Math.round(r.height * dpr));
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.uniform2f(uRes, canvas.width, canvas.height);
+    };
+    resize();
+    new ResizeObserver(resize).observe(canvas);
+
+    const mouse = { x: canvas.width * 0.72, y: canvas.height * 0.45, tx: canvas.width * 0.72, ty: canvas.height * 0.45, h: 0.6, th: 0.6 };
+    canvas.parentElement!.addEventListener('pointermove', (e) => {
+      const r = canvas.getBoundingClientRect();
+      mouse.tx = (e.clientX - r.left) * dpr;
+      mouse.ty = (r.height - (e.clientY - r.top)) * dpr;
+      mouse.th = 1;
+    });
+    canvas.parentElement!.addEventListener('pointerleave', () => (mouse.th = 0.6));
+
+    const draw = (t: number) => {
+      mouse.x += (mouse.tx - mouse.x) * 0.06;
+      mouse.y += (mouse.ty - mouse.y) * 0.06;
+      mouse.h += (mouse.th - mouse.h) * 0.04;
+      gl.uniform1f(uTime, t / 1000);
+      gl.uniform2f(uMouse, mouse.x, mouse.y);
+      gl.uniform1f(uHover, mouse.h);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    };
+
+    let visible = true;
+    let raf = 0;
+    const loop = (t: number) => {
+      draw(t);
+      raf = requestAnimationFrame(loop);
+    };
+    new IntersectionObserver(([e]) => {
+      visible = e.isIntersecting;
+      cancelAnimationFrame(raf);
+      if (visible && !reduced && !document.hidden) raf = requestAnimationFrame(loop);
+    }).observe(canvas);
+    document.addEventListener('visibilitychange', () => {
+      cancelAnimationFrame(raf);
+      if (!document.hidden && visible && !reduced) raf = requestAnimationFrame(loop);
+    });
+    if (reduced) draw(12000);
+    canvas.classList.add('on');
+  }
+</script>
+
+<style>
+  .heromap {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 1.6s var(--ease-out);
+  }
+  .heromap.on {
+    opacity: 1;
+  }
+</style>

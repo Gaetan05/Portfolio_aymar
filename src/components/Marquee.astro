@@ -1,0 +1,78 @@
+---
+interface Props {
+  items: string[];
+  reverse?: boolean;
+  speed?: number;
+  variant?: 'signal' | 'ink' | 'plain';
+  size?: 'l' | 'm';
+}
+const { items, reverse = false, speed = 60, variant = 'signal', size = 'l' } = Astro.props;
+---
+
+<div class:list={['marquee', variant, size]} data-marquee={reverse ? 'reverse' : ''} data-speed={speed} aria-hidden="true">
+  <div class="marquee-track">
+    {
+      items.map((t, i) => (
+        <span class="mq-item">
+          <span class:list={['display', { serif: i % 2 === 1 }]}>{t}</span>
+          <span class="mq-star">✺</span>
+        </span>
+      ))
+    }
+  </div>
+</div>
+
+<style>
+  .marquee {
+    overflow: hidden;
+    white-space: nowrap;
+    padding-block: 0.25em;
+    user-select: none;
+  }
+  .signal {
+    background: var(--signal);
+    color: var(--signal-ink);
+  }
+  .ink {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .marquee-track {
+    display: inline-flex;
+    will-change: transform;
+  }
+  .mq-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    padding-right: 0.4em;
+  }
+  .l {
+    font-size: clamp(2.4rem, 7vw, 6.5rem);
+  }
+  .m {
+    font-size: clamp(1.4rem, 3vw, 2.4rem);
+  }
+  .display {
+    line-height: 1;
+    padding-top: 0.06em;
+  }
+  .serif {
+    font-family: var(--f-serif);
+    font-style: italic;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: -0.02em;
+    font-stretch: 100%;
+  }
+  .mq-star {
+    font-size: 0.6em;
+    display: inline-block;
+    animation: spin 8s linear infinite;
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+</style>

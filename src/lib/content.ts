@@ -102,3 +102,31 @@ export function readingTime(body = '') {
   const words = body.replace(/```[\s\S]*?```/g, '').split(/\s+/).filter(Boolean).length;
   return Math.max(1, Math.round(words / 220));
 }
+
+/** Deterministic 32-bit hash — used to give every entry its own generative art. */
+export function hash(str: string) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/** Like `rich`, but wraps every word in <span class="w"> so it can be animated word by word. */
+export function richWords(text: string) {
+  const esc = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+  const out: string[] = [];
+  const re = /==(.+?)==|\*(.+?)\*|([^*=]+|[*=])/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text))) {
+    const [, mark, italic, plain] = m;
+    const cls = mark ? 'w mark' : italic ? 'w serif' : 'w';
+    const chunk = mark ?? italic ?? plain ?? '';
+    chunk.split(/(\s+)/).forEach((part) => {
+      if (!part) return;
+      out.push(/^\s+$/.test(part) ? ' ' : `<span class="${cls}">${esc(part)}</span>`);
+    });
+  }
+  return out.join('');
+}

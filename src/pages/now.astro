@@ -1,6 +1,8 @@
 ---
 import { render } from 'astro:content';
 import Base from '../layouts/Base.astro';
+import PageHero from '../components/PageHero.astro';
+import { site } from '../site.config';
 import { getNow, formatDate } from '../lib/content';
 
 const entries = await getNow();
@@ -9,23 +11,25 @@ const [current, ...archive] = rendered;
 ---
 
 <Base title="Now" description="What I'm focused on at this point in my life.">
-  <section class="wrap page-head">
-    <p class="eyebrow">A /now page</p>
-    <h1>What I’m doing now</h1>
-    <p class="lede">
-      What I’d tell a friend I hadn’t seen in a year. Inspired by <a href="https://nownownow.com/about" target="_blank" rel="noopener"
-        >nownownow.com</a
-      >. Older snapshots are kept below — a small diary of where my head has been.
-    </p>
-  </section>
+  <PageHero
+    index="06"
+    label="A /now page — field notes"
+    title="Right"
+    italic="now"
+    intro="What I’d tell a friend I hadn’t seen in a year. Older snapshots stay below — a small diary of where my head has been."
+  />
   {
     current && (
-      <section class="wrap current">
-        <p class="meta">
-          Updated {formatDate(current.e.data.date, { year: 'numeric', month: 'long', day: 'numeric' })}
-          {current.e.data.location && ` · 📍 ${current.e.data.location}`}
-        </p>
-        <div class="prose">
+      <section class="current pad grid12">
+        <div class="stamp">
+          <span class="display day">{String(current.e.data.date.getUTCDate()).padStart(2, '0')}</span>
+          <span class="mono">{formatDate(current.e.data.date, { month: 'long', year: 'numeric' })}</span>
+          {current.e.data.location && <span class="mono muted">📍 {current.e.data.location}</span>}
+          <span class="mono muted">
+            Local time <span data-clock={site.timezone}>--:--</span>
+          </span>
+        </div>
+        <div class="prose big" data-rise>
           <current.Content />
         </div>
       </section>
@@ -33,47 +37,109 @@ const [current, ...archive] = rendered;
   }
   {
     archive.length > 0 && (
-      <section class="wrap section">
-        <p class="eyebrow">Previously</p>
-        <h2>Past snapshots</h2>
+      <section class="pad archive">
+        <div class="sec-head">
+          <span class="label">
+            <span class="num">↺</span>
+          </span>
+          <span class="label">Previously</span>
+          <span class="label">{archive.length} snapshots</span>
+        </div>
         {archive.map(({ e, Content }) => (
-          <details class="snap card">
-            <summary>
-              <strong>{formatDate(e.data.date, { year: 'numeric', month: 'long' })}</strong>
-              {e.data.location && <span class="meta">{e.data.location}</span>}
+          <details class="snap">
+            <summary class="grid12">
+              <span class="display s-date">{formatDate(e.data.date, { month: 'short', year: 'numeric' })}</span>
+              <span class="mono muted s-loc">{e.data.location}</span>
+              <span class="mono s-open">Open +</span>
             </summary>
-            <div class="prose">
-              <Content />
+            <div class="grid12">
+              <div class="prose s-body">
+                <Content />
+              </div>
             </div>
           </details>
         ))}
       </section>
     )
   }
+  <p class="pad nnn mono muted">
+    Inspired by <a class="ulink" href="https://nownownow.com/about" target="_blank" rel="noopener">nownownow.com</a>
+  </p>
 </Base>
 
 <style>
   .current {
-    padding-bottom: 20px;
+    margin-top: clamp(40px, 6vw, 80px);
+    align-items: start;
+    row-gap: 32px;
   }
-  .current .prose {
-    margin-top: 1.5rem;
+  .stamp {
+    grid-column: 1 / span 4;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: sticky;
+    top: calc(var(--header-h) + 16px);
+  }
+  .day {
+    font-size: clamp(8rem, 20vw, 20rem);
+    line-height: 0.76;
+  }
+  .muted {
+    color: var(--ink-3);
+  }
+  .big {
+    grid-column: 6 / -1;
+    font-size: clamp(1.25rem, 2vw, 1.9rem);
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+  }
+  .archive {
+    margin-top: clamp(80px, 10vw, 160px);
   }
   .snap {
-    margin-top: 1rem;
-    padding: 1.1rem 1.4rem;
+    border-bottom: 1px solid var(--rule);
   }
-  summary {
-    cursor: pointer;
-    display: flex;
-    gap: 1rem;
+  .snap summary {
+    list-style: none;
+    padding-block: 18px;
     align-items: baseline;
+    cursor: pointer;
   }
-  summary strong {
-    font-family: var(--font-display);
-    font-size: 1.2rem;
+  .snap summary::-webkit-details-marker {
+    display: none;
   }
-  .snap .prose {
-    margin-top: 1rem;
+  .s-date {
+    grid-column: 1 / span 6;
+    font-size: clamp(2rem, 4vw, 4rem);
+  }
+  .s-loc {
+    grid-column: 7 / span 3;
+  }
+  .s-open {
+    grid-column: 11 / -1;
+    justify-self: end;
+  }
+  .snap[open] .s-open {
+    background: var(--signal);
+    color: var(--signal-ink);
+    padding: 0 0.3em;
+  }
+  .s-body {
+    grid-column: 6 / -1;
+    padding-bottom: 32px;
+  }
+  .nnn {
+    margin-top: 48px;
+  }
+  @media (max-width: 900px) {
+    .stamp,
+    .big,
+    .s-body {
+      grid-column: 1 / -1;
+    }
+    .stamp {
+      position: static;
+    }
   }
 </style>

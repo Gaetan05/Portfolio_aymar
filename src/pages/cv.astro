@@ -15,74 +15,78 @@ const groups = [
 const host = Astro.site ? new URL(url(), Astro.site).href.replace(/^https?:\/\//, '').replace(/\/$/, '') : '';
 ---
 
-<Base title="CV" description={`Curriculum vitae of ${site.name}.`}>
-  <div class="wrap toolbar no-print">
-    <p class="meta">This CV is generated from the same content as the rest of the site — always up to date.</p>
-    <button class="btn" type="button" onclick="window.print()">Download as PDF</button>
+<Base title="CV" description={`Curriculum vitae of ${site.name}.`} bareFooter>
+  <div class="toolbar pad no-print">
+    <p class="mono">Generated from the same content as the rest of the site — always up to date.</p>
+    <button class="pill solid" type="button" onclick="window.print()" data-magnetic>Download PDF <span class="arr">↓</span></button>
   </div>
-  <article class="cv wrap">
-    <header>
-      <div>
-        <h1>{site.name}</h1>
-        <p class="headline">{site.headline}</p>
+  <article class="cv">
+    <header class="cv-head">
+      <h1 class="display">{site.name}</h1>
+      <div class="cv-sub">
+        <p class="serif headline">{site.headline}</p>
+        <ul class="contact mono">
+          {site.email && <li><a href={`mailto:${site.email}`}>{site.email}</a></li>}
+          {site.location && <li>{site.location}</li>}
+          {host && <li><a href={url()}>{host}</a></li>}
+          {site.socials.filter((s) => s.url.startsWith('http')).map((s) => <li><a href={s.url}>{s.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}</a></li>)}
+        </ul>
       </div>
-      <ul class="contact">
-        {site.email && <li><a href={`mailto:${site.email}`}>{site.email}</a></li>}
-        {site.location && <li>{site.location}</li>}
-        {host && <li><a href={url()}>{host}</a></li>}
-        {site.socials.filter((s) => s.url.startsWith('http')).map((s) => <li><a href={s.url}>{s.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}</a></li>)}
-      </ul>
     </header>
 
-    <section>
-      <h2>Profile</h2>
-      <p>{site.intro}</p>
+    <section class="blk">
+      <h2 class="label">Profile</h2>
+      <p class="profile">{site.intro}</p>
     </section>
 
     {groups.map((g) => (
-      <section>
-        <h2>{g.title}</h2>
-        {g.items.map((e) => (
-          <div class="row">
-            <div class="when">{formatRange(e.data.start, e.data.end)}</div>
-            <div>
-              <h3>{e.data.role} <span class="org">— {e.data.org}</span></h3>
-              {e.data.location && <p class="loc">{e.data.location}</p>}
-              {e.data.summary && <p>{e.data.summary}</p>}
-              {e.data.highlights.length > 0 && <ul>{e.data.highlights.map((h) => <li>{h}</li>)}</ul>}
+      <section class="blk">
+        <h2 class="label">{g.title}</h2>
+        <div>
+          {g.items.map((e) => (
+            <div class="row">
+              <div class="when mono">{formatRange(e.data.start, e.data.end)}</div>
+              <div>
+                <h3>{e.data.role} <span class="org">— {e.data.org}</span></h3>
+                {e.data.location && <p class="loc mono">{e.data.location}</p>}
+                {e.data.summary && <p>{e.data.summary}</p>}
+                {e.data.highlights.length > 0 && <ul>{e.data.highlights.map((h) => <li>{h}</li>)}</ul>}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </section>
     ))}
 
     {projects.length > 0 && (
-      <section>
-        <h2>Selected projects</h2>
-        {projects.map((p) => (
-          <div class="row">
-            <div class="when">{p.data.date.getUTCFullYear()}</div>
-            <div>
-              <h3>{p.data.title}</h3>
-              <p>{p.data.summary}</p>
+      <section class="blk">
+        <h2 class="label">Selected projects</h2>
+        <div>
+          {projects.map((p) => (
+            <div class="row">
+              <div class="when mono">{p.data.date.getUTCFullYear()}</div>
+              <div>
+                <h3>{p.data.title}</h3>
+                <p>{p.data.summary}</p>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </section>
     )}
 
-    <section class="two">
+    <section class="blk">
+      <h2 class="label">Skills</h2>
       <div>
-        <h2>Skills</h2>
-        {site.skills.map((g) => <p><strong>{g.group}:</strong> {g.items.join(', ')}</p>)}
+        {site.skills.map((g) => <p class="sk"><span class="mono">{g.group}</span> {g.items.join(', ')}</p>)}
       </div>
-      {site.languages.length > 0 && (
-        <div>
-          <h2>Languages</h2>
-          {site.languages.map((l) => <p><strong>{l.name}</strong> — {l.level}</p>)}
-        </div>
-      )}
     </section>
+    {site.languages.length > 0 && (
+      <section class="blk">
+        <h2 class="label">Languages</h2>
+        <div>{site.languages.map((l) => <p class="sk"><span class="mono">{l.name}</span> {l.level}</p>)}</div>
+      </section>
+    )}
   </article>
 </Base>
 
@@ -93,111 +97,125 @@ const host = Astro.site ? new URL(url(), Astro.site).href.replace(/^https?:\/\//
     align-items: center;
     gap: 1rem;
     flex-wrap: wrap;
-    padding-top: 2.5rem;
-  }
-  .toolbar p {
-    margin: 0;
+    padding-top: calc(var(--header-h) + 32px);
+    color: var(--ink-3);
   }
   .cv {
-    max-width: 880px;
-    margin-block: 2rem 4rem;
-    padding: clamp(24px, 5vw, 56px);
-    background: var(--bg-elev);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow);
+    width: min(1100px, calc(100% - 2 * var(--pad)));
+    margin: 32px auto 80px;
+    padding: clamp(24px, 5vw, 72px);
+    background: #f7f5ef;
+    color: #0f0f0d;
     font-size: 0.95rem;
-    line-height: 1.55;
+    line-height: 1.5;
+    box-shadow: 0 40px 100px -40px rgb(0 0 0 / 0.4);
   }
-  header {
-    display: flex;
-    justify-content: space-between;
-    gap: 2rem;
-    flex-wrap: wrap;
-    padding-bottom: 1.5rem;
-    border-bottom: 2px solid var(--ink);
+  .cv-head {
+    padding-bottom: 28px;
+    border-bottom: 3px solid #0f0f0d;
   }
   h1 {
-    font-size: clamp(2rem, 5vw, 2.8rem);
-    margin: 0;
+    font-size: clamp(3rem, 9vw, 7.5rem);
+  }
+  .cv-sub {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-top: 16px;
   }
   .headline {
-    color: var(--accent);
-    font-weight: 500;
-    margin: 0.3rem 0 0;
+    font-size: clamp(1.4rem, 2.4vw, 2rem);
   }
   .contact {
-    list-style: none;
-    padding: 0;
-    margin: 0;
     text-align: right;
-    font-size: 0.85rem;
-    color: var(--ink-soft);
+    font-size: 0.7rem;
+    line-height: 1.6;
+    text-transform: none;
   }
-  .contact a {
-    text-decoration: none;
+  .blk {
+    display: grid;
+    grid-template-columns: 22% 1fr;
+    gap: 24px;
+    padding-block: 24px;
+    border-bottom: 1px solid rgb(15 15 13 / 0.15);
   }
-  section {
-    margin-top: 1.8rem;
+  .blk .label {
+    color: #75726a;
+    padding-top: 4px;
   }
-  h2 {
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.14em;
-    color: var(--ink-mute);
-    font-weight: 500;
-    margin-bottom: 0.8rem;
+  .profile {
+    font-size: 1.2rem;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
   }
   .row {
     display: grid;
-    grid-template-columns: 150px 1fr;
-    gap: 1.2rem;
-    padding: 0.6rem 0;
+    grid-template-columns: 180px 1fr;
+    gap: 16px;
+    padding-block: 8px;
     break-inside: avoid;
   }
+  .row + .row {
+    border-top: 1px dashed rgb(15 15 13 / 0.15);
+    padding-top: 14px;
+  }
   .when {
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    color: var(--ink-mute);
-    padding-top: 0.2rem;
+    font-size: 0.7rem;
+    color: #75726a;
+    padding-top: 4px;
   }
   h3 {
-    font-family: var(--font-body);
-    font-size: 1rem;
+    font-size: 1.05rem;
     font-weight: 600;
-    margin: 0 0 0.2rem;
-    letter-spacing: 0;
   }
   .org {
     font-weight: 400;
-    color: var(--ink-soft);
+    color: #3b3a36;
   }
   .loc {
-    font-size: 0.82rem;
-    color: var(--ink-mute);
-    margin: 0 0 0.3rem;
+    font-size: 0.66rem;
+    color: #75726a;
+    margin: 2px 0 6px;
   }
   .row p {
-    margin: 0 0 0.3rem;
+    margin-top: 4px;
   }
-  ul {
-    margin: 0.3rem 0 0;
-    padding-left: 1.1em;
-  }
-  .two {
+  .row ul {
+    margin-top: 6px;
     display: grid;
-    grid-template-columns: 1.5fr 1fr;
-    gap: 2rem;
+    gap: 3px;
   }
-  .two p {
-    margin: 0 0 0.35rem;
+  .row li {
+    padding-left: 1.2em;
+    position: relative;
   }
-  @media (max-width: 640px) {
+  .row li::before {
+    content: '—';
+    position: absolute;
+    left: 0;
+    color: #75726a;
+  }
+  .sk {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 16px;
+  }
+  .sk + .sk {
+    margin-top: 6px;
+  }
+  .sk .mono {
+    font-size: 0.7rem;
+    color: #75726a;
+    padding-top: 3px;
+  }
+  @media (max-width: 700px) {
+    .blk,
     .row,
-    .two {
+    .sk {
       grid-template-columns: 1fr;
-      gap: 0.2rem;
+      gap: 6px;
     }
     .contact {
       text-align: left;
@@ -205,24 +223,26 @@ const host = Astro.site ? new URL(url(), Astro.site).href.replace(/^https?:\/\//
   }
   @media print {
     @page {
-      margin: 14mm;
+      margin: 12mm;
     }
     :global(body) {
-      background: #fff;
-      color: #000;
+      background: #fff !important;
     }
-    :global(.site-header),
-    :global(.site-footer) {
+    :global(.hdr),
+    :global(.ftr),
+    :global(.cursor) {
       display: none !important;
     }
     .cv {
-      border: 0;
       box-shadow: none;
       padding: 0;
       margin: 0;
       max-width: none;
       background: #fff;
-      font-size: 10.5pt;
+      font-size: 9.5pt;
+    }
+    h1 {
+      font-size: 44pt;
     }
   }
 </style>

@@ -12,6 +12,9 @@ export const site = {
   initials: 'GA',
   /** One-line professional headline. */
   headline: 'Builder, explorer & lifelong learner',
+  /** Big statement on the home page. Wrap words in *asterisks* to set them in italic serif, ==double equals== to highlight. */
+  manifesto:
+    'I make things, *collect* curiosities and write down what I learn — so that ==everything I touch== leaves a small map for whoever comes next.',
   /** Rotating words in the home hero: "I build…", "I explore…" */
   heroVerbs: ['build things', 'explore ideas', 'learn in public', 'collect discoveries'],
   /** Two or three sentences about you — used on the home page and in SEO. */
@@ -19,6 +22,8 @@ export const site = {
     'This is my corner of the internet: the work I do, the things I make, the hobbies that keep me curious and the discoveries I pick up along the way. It grows as I do.',
   /** Where you are (optional — leave empty to hide). */
   location: 'Planet Earth',
+  /** IANA time zone for the live clock in the header & footer. */
+  timezone: 'Europe/Paris',
   /** Public contact email (optional — leave empty to hide). */
   email: 'gaetanaymar.me@gmail.com',
   /** Are you open to opportunities? Shows a small badge in the hero. */

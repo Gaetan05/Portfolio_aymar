@@ -4,22 +4,38 @@ A personal site for **everything**: work, projects, hobbies, discoveries, a /now
 
 Built with [Astro](https://astro.build). Static, fast, accessible, dark-mode ready, and deployed automatically to GitHub Pages.
 
-## ✨ Features
+## ✨ Design — "Field Atlas"
+
+The site presents itself as an atlas of a curious life: every section is a numbered plate, and the home page opens on a living topographic map.
 
 | | |
 |---|---|
-| 🏠 **Home** | Hero with rotating tagline, a "right now" card, live stats, featured projects, latest journal entries, hobbies and shelf picks |
-| 👤 **About** | Your story (Markdown), skills, and a timeline of experience, education and awards |
-| 🛠 **Projects** | Filterable by status and tech stack. Detail pages with links, table of contents, and prev/next navigation |
-| ✍️ **Journal** | Essays, notes, **discoveries**, **TILs** and logs, grouped by year and filterable by type. Includes reading time and an RSS feed |
-| 🎨 **Hobbies** | One page per hobby, with images and whatever else you want to write |
-| 📚 **Shelf** | Books, films, podcasts, tools, places and more, with ratings, notes, favourites and a wishlist |
-| 📍 **Now** | What you're focused on right now. Older snapshots are archived automatically, so it doubles as a diary |
-| 📄 **CV** | Generated from the same data as the rest of the site. The **Download as PDF** button gives you a clean print layout |
-| 🔎 **Search** | Press `⌘K`, `Ctrl K` or `/` to search everything on the site |
-| 🏷 **Tags** | One tag index across all sections |
-| 🌗 **Themes** | Light and dark, following the visitor's system setting, with a toggle |
-| ⚙️ **Also** | SEO and Open Graph tags, sitemap, RSS, reduced-motion support, mobile menu, 404 page |
+| 🗺 **Live contour map** | A WebGL2 shader draws topographic lines from domain-warped noise. Your cursor raises a hill and lights it up in lime. It pauses when off-screen and shows a still frame for reduced-motion users |
+| 🔤 **Editorial type** | Condensed *Bricolage Grotesque* at poster sizes, *Instrument Serif* italics as interjections, and *Geist Mono* labels. All fonts are self-hosted |
+| 🎨 **Generative covers** | Every project and essay gets unique duotone artwork (contours, halftone, stripes, Truchet arcs, skyline, glyph) seeded from its title. Set `accent:` to choose the colour, or add a real `cover:` image |
+| 🧲 **Motion & interaction** | Lenis smooth scroll, GSAP line reveals, a scroll-scrubbed manifesto, a horizontal pinned work gallery, velocity-reactive marquees, magnetic buttons, a blend-mode cursor with labels, and a full-screen menu |
+| 🎞 **Transitions** | Curtain page transitions (cross-document View Transitions), a circular reveal when switching theme, and a first-visit preloader |
+| 🖐 **Playful sections** | Hobbies are draggable stickers on a desk, the Shelf is literal book spines, About has a tilting "explorer's card", and projects show a cursor-following preview with a list/grid toggle |
+| ♿ **Robust** | Works without JS, respects `prefers-reduced-motion`, keyboard focus-trap in the menu, AA-contrast labels, light and dark themes |
+| 🥚 **Easter eggs** | Press `G` to overlay the 12-column grid, and `/` or `⌘K` to search |
+
+## ✨ Sections
+
+| | |
+|---|---|
+| 🏠 **Home** | Hero map, manifesto, counters, selected work, journal, hobby desk, shelf, and the latest /now |
+| 👤 **About** | Your story, an ID card, giant skill lines, and an accordion career ledger |
+| 🛠 **Projects** | List with cursor previews, or a grid. Filter by status and stack |
+| ✍️ **Journal** | Essays, notes, **discoveries**, **TILs** and logs, grouped by year, with RSS |
+| 🎨 **Hobbies** / 📚 **Shelf** / 📍 **Now** | What you love, what you recommend, and what you're doing right now (snapshots are archived automatically) |
+| 📄 **CV** | Generated from the same data, with a **Download PDF** option that has a clean print layout |
+
+### Customising the look
+
+- **Colours:** `src/styles/global.css` → `--paper`, `--ink`, `--signal` (the lime). Every component, including the WebGL map, reads these values.
+- **Big statement on the home page:** `manifesto` in `src/site.config.ts`. Wrap words in `*asterisks*` for serif italics and `==equals==` for the highlighter.
+- **Clock:** `timezone` in `src/site.config.ts`.
+- **Social card:** `public/og.png` (1200×630).
 
 ## ✏️ Updating content
 

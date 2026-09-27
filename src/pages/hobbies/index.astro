@@ -1,26 +1,33 @@
 ---
 import Base from '../../layouts/Base.astro';
+import PageHero from '../../components/PageHero.astro';
 import { getHobbies, url } from '../../lib/content';
 const hobbies = await getHobbies();
+const TONES = ['var(--signal)', '#c9b8ff', '#ff5b24', '#2d3cff', '#1e3b2f', '#ebe7dd'];
+const INK = ['#0f0f0d', '#0f0f0d', '#0f0f0d', '#ebe7dd', '#d4ff3a', '#0f0f0d'];
 ---
 
 <Base title="Hobbies" description="What I do for the love of it.">
-  <section class="wrap page-head">
-    <p class="eyebrow">For the love of it</p>
-    <h1>Hobbies</h1>
-    <p class="lede">The things I do when nobody’s paying me — and that quietly make me better at the things they do.</p>
-  </section>
-  <section class="wrap list">
+  <PageHero
+    index="04"
+    label="Off the clock"
+    title="For"
+    italic="love"
+    count={hobbies.length}
+    intro="The things I do when nobody’s paying me — and that quietly make me better at the things they do."
+  />
+
+  <section class="pad hlist">
     {
       hobbies.map((h, i) => (
-        <a class="row reveal" href={url(`hobbies/${h.id}`)}>
-          <span class="num meta">{String(i + 1).padStart(2, '0')}</span>
-          <span class="icon">{h.data.icon}</span>
-          <span class="txt">
-            <h2>{h.data.title}</h2>
-            <p>{h.data.summary}</p>
+        <a class="h" href={url(`hobbies/${h.id}`)} style={`--tone:${TONES[i % TONES.length]};--tone-ink:${INK[i % INK.length]}`} data-cursor="Open">
+          <span class="h-n mono">{String(i + 1).padStart(2, '0')}</span>
+          <span class="h-title display">{h.data.title}</span>
+          <span class="h-icon" aria-hidden="true">
+            {h.data.icon}
           </span>
-          {h.data.since && <span class="meta since">since {h.data.since}</span>}
+          <span class="h-sum">{h.data.summary}</span>
+          <span class="h-since mono">{h.data.since ? `Since ${h.data.since}` : '—'}</span>
         </a>
       ))
     }
@@ -28,54 +35,89 @@ const hobbies = await getHobbies();
 </Base>
 
 <style>
-  .list {
-    padding-bottom: 60px;
+  .hlist {
+    border-top: 1px solid var(--rule-strong);
+    margin-inline: var(--pad);
+    padding-inline: 0;
   }
-  .row {
+  .h {
+    position: relative;
     display: grid;
-    grid-template-columns: 48px 72px 1fr auto;
+    grid-template-columns: 5% 1fr 30% 10%;
+    gap: var(--gap);
     align-items: center;
-    gap: 1.2rem;
-    padding: 1.8rem 0.5rem;
-    border-top: 1px solid var(--line);
-    text-decoration: none;
-    transition: padding 0.3s, background 0.3s;
-    border-radius: 14px;
+    padding-block: clamp(18px, 2.4vw, 34px);
+    border-bottom: 1px solid var(--rule-strong);
+    isolation: isolate;
+    overflow: hidden;
   }
-  .row:last-child {
-    border-bottom: 1px solid var(--line);
+  .h::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--tone);
+    z-index: -1;
+    transform: translateY(101%);
+    transition: transform 0.7s var(--ease-out);
   }
-  .row:hover {
-    color: var(--ink);
-    background: var(--bg-elev);
-    padding-inline: 1.5rem;
+  .h:hover::before {
+    transform: none;
   }
-  .row:hover h2 {
-    color: var(--accent);
-    font-style: italic;
+  .h:hover {
+    color: var(--tone-ink);
   }
-  .icon {
-    font-size: 2.6rem;
-    transition: transform 0.3s;
+  .h-title {
+    font-size: clamp(2.6rem, 8vw, 8.5rem);
+    transition: transform 0.7s var(--ease-out);
   }
-  .row:hover .icon {
-    transform: scale(1.15) rotate(-8deg);
+  .h:hover .h-title {
+    transform: translateX(0.1em);
   }
-  h2 {
-    margin: 0 0 0.2rem;
-    transition: color 0.2s;
+  .h-icon {
+    position: absolute;
+    right: 32%;
+    top: 50%;
+    font-size: clamp(3rem, 8vw, 8rem);
+    translate: 0 -50%;
+    scale: 0;
+    rotate: -30deg;
+    transition: scale 0.7s var(--ease-out), rotate 0.7s var(--ease-out);
+    pointer-events: none;
   }
-  p {
-    margin: 0;
-    color: var(--ink-soft);
+  .h:hover .h-icon {
+    scale: 1;
+    rotate: 8deg;
   }
-  @media (max-width: 640px) {
-    .row {
-      grid-template-columns: 52px 1fr;
+  .h-sum {
+    font-size: 1rem;
+    line-height: 1.4;
+    opacity: 0.85;
+  }
+  .h-since {
+    justify-self: end;
+    opacity: 0.7;
+  }
+  @media (max-width: 900px) {
+    .h {
+      grid-template-columns: auto 1fr;
     }
-    .num,
-    .since {
-      display: none;
+    .h-title {
+      grid-column: 1 / -1;
+    }
+    .h-sum {
+      grid-column: 1 / -1;
+    }
+    .h-since {
+      grid-row: 1;
+      grid-column: 2;
+    }
+    .h-icon {
+      scale: 1;
+      rotate: 0deg;
+      right: 0;
+      font-size: 2.4rem;
+      top: 30px;
+      translate: none;
     }
   }
 </style>

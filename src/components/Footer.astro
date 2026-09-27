@@ -1,81 +1,215 @@
 ---
 import { nav, site } from '../site.config';
 import { url } from '../lib/content';
+import Marquee from './Marquee.astro';
+
+const { bare = false } = Astro.props as { bare?: boolean };
 const year = new Date().getFullYear();
+const [first, ...rest] = site.name.split(' ');
 ---
 
-<footer class="site-footer no-print">
-  <div class="wrap">
-    <div class="cta">
-      <p class="eyebrow">Say hello</p>
-      <h2>Let’s build, learn or wander<br />something together.</h2>
-      {site.email && <a class="btn" href={`mailto:${site.email}`}>{site.email}</a>}
+<footer class="ftr no-print">
+  {
+    !bare && (
+      <>
+        <Marquee items={['Say hello', 'Start a project', 'Swap a book', 'Grab a coffee']} speed={70} />
+        <section class="ftr-cta pad">
+          <p class="label">
+            <span class="num">∞</span> Open door
+          </p>
+          <h2 class="display ftr-title" data-split>
+            Got an idea, a question <br />
+            or a <em class="serif">good book</em>?
+          </h2>
+          {site.email && (
+            <div class="ftr-mail">
+              <a class="ftr-email" href={`mailto:${site.email}`} data-cursor="Write">
+                {site.email}
+              </a>
+              <button class="pill" type="button" data-copy={site.email} data-magnetic>
+                Copy <span class="arr">↗</span>
+              </button>
+            </div>
+          )}
+        </section>
+      </>
+    )
+  }
+
+  <section class="ftr-grid pad grid12">
+    <div class="c1">
+      <p class="label">Index</p>
+      <ul>
+        <li><a class="ulink" href={url()}>Home</a></li>
+        {nav.map((n) => <li><a class="ulink" href={url(n.href)}>{n.label}</a></li>)}
+      </ul>
     </div>
-    <div class="cols">
-      <div>
-        <p class="label">Explore</p>
-        <ul>
-          <li><a href={url()}>Home</a></li>
-          {nav.map((n) => <li><a href={url(n.href)}>{n.label}</a></li>)}
-        </ul>
-      </div>
-      <div>
-        <p class="label">More</p>
-        <ul>
-          <li><a href={url('cv')}>CV / Résumé</a></li>
-          <li><a href={url('tags')}>All tags</a></li>
-          <li><a href={url('rss.xml')}>RSS feed</a></li>
-        </ul>
-      </div>
-      <div>
-        <p class="label">Elsewhere</p>
-        <ul>
-          {site.socials.map((s) => <li><a href={s.url} rel="me noopener" target={s.url.startsWith('http') ? '_blank' : undefined}>{s.label}</a></li>)}
-        </ul>
-      </div>
+    <div class="c2">
+      <p class="label">Elsewhere</p>
+      <ul>
+        {site.socials.map((s) => <li><a class="ulink" href={s.url} target="_blank" rel="me noopener">{s.label} ↗</a></li>)}
+        <li><a class="ulink" href={url('rss.xml')}>RSS ↗</a></li>
+      </ul>
     </div>
-    <p class="fine meta">© {year} {site.name} · Built with Astro · Always a work in progress</p>
+    <div class="c3">
+      <p class="label">Local time</p>
+      <p class="clock display" data-clock={site.timezone}>--:--:--</p>
+      <p class="mono muted">{site.location}</p>
+    </div>
+    <div class="c4">
+      <p class="label">Colophon</p>
+      <p class="muted small">
+        Set in Bricolage Grotesque, Instrument Serif &amp; Geist. Built with Astro, GSAP &amp; a WebGL contour map. Press <kbd>G</kbd> to see the grid,
+        <kbd>/</kbd> to search.
+      </p>
+    </div>
+  </section>
+
+  <div class="ftr-bottom pad mono">
+    <span>© {year} {site.name}</span>
+    <span>Always a work in progress</span>
+    <a href="#main" class="ulink" data-top>Back to top ↑</a>
+  </div>
+
+  <div class="ftr-giant display" aria-hidden="true">
+    <span>{first}</span><em class="serif">{rest.join(' ')}</em>
   </div>
 </footer>
 
+<script>
+  document.querySelector('[data-top]')?.addEventListener('click', (e) => {
+    const l = (window as any).__lenis;
+    if (l) {
+      e.preventDefault();
+      l.scrollTo(0, { duration: 1.6 });
+    }
+  });
+</script>
+
 <style>
-  .site-footer {
-    border-top: 1px solid var(--line);
-    padding-block: clamp(56px, 8vw, 96px) 32px;
-    margin-top: 40px;
-    background: var(--bg-sunk);
+  .ftr {
+    margin-top: clamp(80px, 12vw, 180px);
+    background: var(--night);
+    color: var(--bone);
+    overflow: hidden;
   }
-  .cta h2 {
-    font-size: clamp(1.8rem, 4.5vw, 3rem);
-    margin: 0.4em 0 0.8em;
+  .ftr-cta {
+    padding-block: clamp(64px, 10vw, 160px) clamp(48px, 7vw, 100px);
   }
-  .cols {
+  .ftr .label {
+    color: rgb(from var(--bone) r g b / 0.5);
+  }
+  .ftr-title {
+    font-size: var(--t-xl);
+    margin-top: 24px;
+  }
+  .ftr-title .serif {
+    color: var(--signal);
+  }
+  .ftr-mail {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem 2rem;
+    margin-top: clamp(32px, 5vw, 64px);
+  }
+  .ftr-email {
+    font-family: var(--f-serif);
+    font-style: italic;
+    font-size: clamp(1.8rem, 5.2vw, 5rem);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    background: linear-gradient(var(--signal), var(--signal)) no-repeat 0 92% / 0 0.12em;
+    transition: background-size 0.8s var(--ease-out), color 0.3s;
+    word-break: break-all;
+  }
+  .ftr-email:hover {
+    background-size: 100% 0.12em;
+  }
+  .ftr .pill {
+    border-color: rgb(from var(--bone) r g b / 0.4);
+  }
+  .ftr-grid {
+    padding-block: 40px;
+    border-top: 1px solid rgb(from var(--bone) r g b / 0.15);
+    row-gap: 32px;
+  }
+  .ftr-grid ul {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 2rem;
-    margin-top: 4rem;
+    gap: 0.25em;
+    margin-top: 12px;
   }
-  .label {
-    font-family: var(--font-mono);
+  .c1 {
+    grid-column: 1 / span 2;
+  }
+  .c2 {
+    grid-column: 3 / span 2;
+  }
+  .c3 {
+    grid-column: 6 / span 3;
+  }
+  .c4 {
+    grid-column: 10 / -1;
+  }
+  .clock {
+    font-size: clamp(2.4rem, 4vw, 3.6rem);
+    margin: 10px 0 6px;
+    font-variant-numeric: tabular-nums;
+    color: var(--signal);
+  }
+  .muted {
+    color: rgb(from var(--bone) r g b / 0.55);
+  }
+  .small {
+    font-size: 0.85rem;
+    margin-top: 12px;
+    max-width: 30ch;
+  }
+  kbd {
+    font-family: var(--f-mono);
     font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--ink-mute);
-    margin-bottom: 0.8em;
+    border: 1px solid rgb(from var(--bone) r g b / 0.35);
+    border-radius: 4px;
+    padding: 0.05em 0.4em;
   }
-  ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+  .ftr-bottom {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding-block: 18px;
+    border-top: 1px solid rgb(from var(--bone) r g b / 0.15);
+    color: rgb(from var(--bone) r g b / 0.6);
   }
-  li + li {
-    margin-top: 0.35em;
+  .ftr-giant {
+    font-size: 19.5vw;
+    line-height: 0.74;
+    white-space: nowrap;
+    display: flex;
+    justify-content: center;
+    gap: 0.04em;
+    margin-bottom: -0.1em;
+    padding-top: 0.05em;
+    letter-spacing: -0.045em;
   }
-  ul a {
-    text-decoration: none;
-    color: var(--ink-soft);
+  .ftr-giant .serif {
+    color: var(--signal);
+    font-size: 0.92em;
+    line-height: 0.74;
+    letter-spacing: -0.04em;
   }
-  .fine {
-    margin: 4rem 0 0;
+  @media (max-width: 900px) {
+    .c1 {
+      grid-column: 1 / span 6;
+    }
+    .c2 {
+      grid-column: 7 / -1;
+    }
+    .c3 {
+      grid-column: 1 / span 6;
+    }
+    .c4 {
+      grid-column: 7 / -1;
+    }
   }
 </style>

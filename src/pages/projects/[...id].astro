@@ -7,18 +7,19 @@ export async function getStaticPaths() {
   const projects = await getProjects();
   return projects.map((p, i) => ({
     params: { id: p.id },
-    props: { project: p, prev: projects[i - 1], next: projects[i + 1] },
+    props: { project: p, next: projects[(i + 1) % projects.length] },
   }));
 }
 
-const { project, prev, next } = Astro.props;
+const { project, next } = Astro.props;
 const { Content, headings } = await render(project);
 const d = project.data;
-const meta = [
-  formatDate(d.date, { year: 'numeric', month: 'long' }),
-  statusLabel[d.status],
-  ...(d.role ? [d.role] : []),
-  ...(d.updated ? [`Updated ${formatDate(d.updated)}`] : []),
+const specs = [
+  { k: 'Year', v: formatDate(d.date, { year: 'numeric', month: 'long' }) },
+  { k: 'Status', v: statusLabel[d.status] },
+  ...(d.role ? [{ k: 'Role', v: d.role }] : []),
+  ...(d.stack.length ? [{ k: 'Stack', v: d.stack.join(', ') }] : []),
+  ...(d.updated ? [{ k: 'Updated', v: formatDate(d.updated) }] : []),
 ];
 ---
 
@@ -27,48 +28,32 @@ const meta = [
   description={d.summary}
   eyebrow="Project"
   back={{ href: url('projects'), label: 'All projects' }}
-  meta={meta}
+  specs={specs}
   tags={d.tags}
   cover={d.cover}
+  art={{ seed: d.title, accent: d.accent }}
   headings={headings}
-  prev={prev && { href: url(`projects/${prev.id}`), title: prev.data.title }}
-  next={next && { href: url(`projects/${next.id}`), title: next.data.title }}
+  next={next && next.id !== project.id ? { href: url(`projects/${next.id}`), title: next.data.title, label: 'Next project' } : undefined}
 >
-  <div slot="aside" class="aside">
-    {
-      d.stack.length > 0 && (
-        <div class="chips">
-          {d.stack.map((s) => (
-            <span class="chip is-accent">{s}</span>
-          ))}
-        </div>
-      )
-    }
-    {
-      d.links.length > 0 && (
-        <div class="links">
-          {d.links.map((l, i) => (
-            <a class:list={['btn', { ghost: i > 0 }]} href={l.url} target="_blank" rel="noopener">
-              {l.label} ↗
-            </a>
-          ))}
-        </div>
-      )
-    }
-  </div>
+  {
+    d.links.length > 0 && (
+      <div slot="actions" class="links">
+        {d.links.map((l, i) => (
+          <a class:list={['pill', { solid: i === 0 }]} href={l.url} target="_blank" rel="noopener" data-magnetic>
+            {l.label} <span class="arr">↗</span>
+          </a>
+        ))}
+      </div>
+    )
+  }
   <Content />
 </Entry>
 
 <style>
-  .aside {
-    display: flex;
-    flex-direction: column;
-    gap: 1.2rem;
-    margin-top: 1.5rem;
-  }
   .links {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.6rem;
+    gap: 10px;
+    margin-top: 28px;
   }
 </style>

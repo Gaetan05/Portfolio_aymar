@@ -1,231 +1,368 @@
 ---
 import { nav, site } from '../site.config';
-import { url } from '../lib/content';
+import { url, getProjects, getJournal, getHobbies, getShelf, getNow } from '../lib/content';
 
-const path = Astro.url.pathname.replace(import.meta.env.BASE_URL.replace(/\/$/, ''), '');
+const [projects, journal, hobbies, shelf, now] = await Promise.all([getProjects(), getJournal(), getHobbies(), getShelf(), getNow()]);
+const counts: Record<string, number> = {
+  projects: projects.length,
+  journal: journal.length,
+  hobbies: hobbies.length,
+  shelf: shelf.length,
+  now: now.length,
+};
+const path = Astro.url.pathname.replace(import.meta.env.BASE_URL.replace(/\/$/, ''), '').replace(/\/$/, '');
 const isActive = (href: string) => path === `/${href}` || path.startsWith(`/${href}/`);
 ---
 
-<header class="site-header no-print">
-  <div class="wrap bar">
-    <a class="logo" href={url()} aria-label={`${site.name} — home`}>
-      <span class="mark">{site.initials}</span>
-      <span class="name">{site.name}</span>
-    </a>
-
-    <nav id="site-nav" aria-label="Main">
-      <ul>
-        {
-          nav.map((item) => (
-            <li>
-              <a href={url(item.href)} aria-current={isActive(item.href) ? 'page' : undefined}>
-                {item.label}
-              </a>
-            </li>
-          ))
-        }
-      </ul>
-    </nav>
-
-    <div class="actions">
-      <button class="icon-btn search-btn" type="button" data-open-search aria-label="Search (Ctrl K)">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-          ><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg
-        >
-        <kbd>⌘K</kbd>
-      </button>
-      <button class="icon-btn" type="button" id="theme-toggle" aria-label="Toggle dark mode">
-        <svg class="sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-          ><circle cx="12" cy="12" r="4"></circle><path
-            d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg
-        >
-        <svg class="moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-          ><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"></path></svg
-        >
-      </button>
-      <button class="icon-btn menu-btn" type="button" aria-controls="site-nav" aria-expanded="false" aria-label="Menu">
-        <span></span><span></span>
-      </button>
-    </div>
+<header class="hdr pad no-print">
+  <a class="hdr-logo" href={url()} aria-label={`${site.name}, home`}>
+    <span class="roll"><span data-t={site.name}>{site.name}</span></span>
+  </a>
+  <div class="hdr-mid mono">
+    <span>Field Atlas</span>
+    <span class="hdr-sep">/</span>
+    <span class="hdr-clock"><span data-clock={site.timezone}>--:--:--</span> <span class="tz">{site.timezone.split('/').pop()?.replace('_', ' ')}</span></span>
+  </div>
+  <nav class="hdr-nav mono" aria-label="Main">
+    {
+      nav.slice(0, 4).map((n) => (
+        <a href={url(n.href)} aria-current={isActive(n.href) ? 'page' : undefined}>
+          <span class="roll"><span data-t={n.label}>{n.label}</span></span>
+        </a>
+      ))
+    }
+  </nav>
+  <div class="hdr-actions mono">
+    <button type="button" data-open-search aria-label="Search">
+      <span class="roll"><span data-t="Search">Search</span></span>
+    </button>
+    <button type="button" data-theme-toggle aria-label="Toggle dark mode" class="theme-dot"><span></span></button>
+    <button type="button" class="menu-open" aria-haspopup="dialog" aria-controls="menu" data-magnetic="0.25">
+      <span class="roll"><span data-t="Menu">Menu</span></span>
+      <span class="burger" aria-hidden="true"><i></i><i></i></span>
+    </button>
   </div>
 </header>
 
+<div id="menu" class="menu no-print" data-lenis-prevent role="dialog" aria-modal="true" aria-label="Site menu" hidden>
+  <div class="menu-top pad">
+    <span class="mono">Index</span>
+    <button type="button" class="menu-close mono" data-magnetic="0.25">
+      <span class="roll"><span data-t="Close">Close</span></span> ✕
+    </button>
+  </div>
+  <nav class="menu-links pad" aria-label="Menu">
+    <a href={url()} class="ml"><span class="ml-n mono">00</span><span class="ml-t display">Home</span></a>
+    {
+      nav.map((n, i) => (
+        <a href={url(n.href)} class="ml" aria-current={isActive(n.href) ? 'page' : undefined}>
+          <span class="ml-n mono">{String(i + 1).padStart(2, '0')}</span>
+          <span class="ml-t display">{n.label}</span>
+          {counts[n.href] !== undefined && <sup class="ml-c mono">{counts[n.href]}</sup>}
+        </a>
+      ))
+    }
+  </nav>
+  <div class="menu-foot pad mono">
+    <div>
+      <span class="label">Contact</span>
+      {site.email && <a class="ulink" href={`mailto:${site.email}`}>{site.email}</a>}
+    </div>
+    <div>
+      <span class="label">Elsewhere</span>
+      <span class="menu-socials">{site.socials.map((s) => <a class="ulink" href={s.url} target="_blank" rel="me noopener">{s.label}</a>)}</span>
+    </div>
+    <div>
+      <span class="label">More</span>
+      <span class="menu-socials"><a class="ulink" href={url('cv')}>CV</a><a class="ulink" href={url('tags')}>Tags</a><a class="ulink" href={url('rss.xml')}>RSS</a></span>
+    </div>
+  </div>
+</div>
+
 <script>
-  const toggle = document.getElementById('theme-toggle');
-  toggle?.addEventListener('click', () => {
-    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-    document.documentElement.dataset.theme = next;
-    try {
-      localStorage.setItem('theme', next);
-    } catch {}
+  import { gsap } from '../scripts/app';
+  const menu = document.getElementById('menu')!;
+  const openBtn = document.querySelector<HTMLButtonElement>('.menu-open')!;
+  const closeBtn = menu.querySelector<HTMLButtonElement>('.menu-close')!;
+  const links = menu.querySelectorAll('.ml');
+  const lenis = () => (window as any).__lenis;
+  let tl: gsap.core.Timeline | null = null;
+
+  function open() {
+    menu.hidden = false;
+    openBtn.setAttribute('aria-expanded', 'true');
+    lenis()?.stop();
+    tl?.kill();
+    tl = gsap
+      .timeline()
+      .fromTo(menu, { clipPath: 'inset(0 0 100% 0)' }, { clipPath: 'inset(0 0 0% 0)', duration: 0.9, ease: 'expo.inOut' })
+      .fromTo(links, { yPercent: 100, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 1, stagger: 0.05, ease: 'expo.out' }, '-=0.45')
+      .fromTo('.menu-foot > *', { y: 20, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.05, duration: 0.8, ease: 'expo.out' }, '<0.2');
+    closeBtn.focus();
+  }
+  function close() {
+    tl?.kill();
+    tl = gsap.timeline({
+      onComplete: () => {
+        menu.hidden = true;
+        lenis()?.start();
+      },
+    });
+    tl.to(menu, { clipPath: 'inset(0 0 100% 0)', duration: 0.8, ease: 'expo.inOut' });
+    openBtn.setAttribute('aria-expanded', 'false');
+    openBtn.focus();
+  }
+  openBtn.addEventListener('click', open);
+  closeBtn.addEventListener('click', close);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !menu.hidden) close();
+    if (e.key === 'Tab' && !menu.hidden) {
+      const f = [...menu.querySelectorAll<HTMLElement>('a, button')];
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) (e.preventDefault(), last.focus());
+      else if (!e.shiftKey && document.activeElement === last) (e.preventDefault(), first.focus());
+    }
   });
 
-  const menu = document.querySelector<HTMLButtonElement>('.menu-btn');
-  const header = document.querySelector('.site-header');
-  menu?.addEventListener('click', () => {
-    const open = menu.getAttribute('aria-expanded') !== 'true';
-    menu.setAttribute('aria-expanded', String(open));
-    header?.classList.toggle('is-open', open);
-  });
-
-  const onScroll = () => header?.classList.toggle('is-scrolled', window.scrollY > 8);
-  onScroll();
-  window.addEventListener('scroll', onScroll, { passive: true });
+  // Hide header on scroll down, show on scroll up.
+  const hdr = document.querySelector<HTMLElement>('.hdr')!;
+  let last = 0;
+  window.addEventListener(
+    'scroll',
+    () => {
+      const y = window.scrollY;
+      hdr.classList.toggle('hdr-hidden', y > 200 && y > last && menu.hidden === true);
+      last = y;
+    },
+    { passive: true },
+  );
 </script>
 
 <style>
-  .site-header {
-    position: sticky;
-    top: 0;
-    z-index: 50;
-    background: color-mix(in oklab, var(--bg) 82%, transparent);
-    backdrop-filter: saturate(1.4) blur(14px);
-    -webkit-backdrop-filter: saturate(1.4) blur(14px);
-    border-bottom: 1px solid transparent;
-    transition: border-color 0.2s;
-    view-transition-name: site-header;
-  }
-  .site-header.is-scrolled {
-    border-bottom-color: var(--line);
-  }
-  .bar {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    height: 68px;
-  }
-  .logo {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    text-decoration: none;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    margin-right: auto;
-  }
-  .mark {
+  .hdr {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 900;
+    height: var(--header-h);
     display: grid;
-    place-items: center;
-    width: 36px;
-    height: 36px;
-    border-radius: 11px;
-    background: var(--ink);
-    color: var(--bg);
-    font-family: var(--font-display);
-    font-size: 0.95rem;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--gap);
+    align-items: center;
+    color: #fff;
+    mix-blend-mode: difference;
+    transition: transform 0.7s var(--ease-out);
+    view-transition-name: header;
+  }
+  .hdr-hidden {
+    transform: translateY(-100%);
+  }
+  .hdr-logo {
+    grid-column: 1 / span 3;
+    font-family: var(--f-display);
+    font-stretch: 75%;
     font-weight: 700;
-    transition: background 0.2s, transform 0.3s;
+    font-size: 1.15rem;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
   }
-  .logo:hover .mark {
-    background: var(--accent);
-    color: var(--accent-ink);
-    transform: rotate(-8deg);
-  }
-  .logo:hover {
-    color: var(--ink);
-  }
-  nav ul {
+  .hdr-mid {
+    grid-column: 4 / span 3;
     display: flex;
-    gap: 0.25rem;
-    list-style: none;
-    margin: 0;
-    padding: 0;
+    gap: 0.6em;
+    white-space: nowrap;
   }
-  nav a {
-    display: block;
-    padding: 0.45em 0.8em;
-    border-radius: 999px;
-    text-decoration: none;
-    font-size: 0.93rem;
-    color: var(--ink-soft);
+  .hdr-sep {
+    opacity: 0.4;
   }
-  nav a:hover {
-    color: var(--ink);
-    background: var(--bg-sunk);
+  .hdr-clock {
+    font-variant-numeric: tabular-nums;
   }
-  nav a[aria-current='page'] {
-    color: var(--ink);
-    background: var(--bg-sunk);
-    font-weight: 500;
+  .tz {
+    opacity: 0.55;
   }
-  .actions {
+  .hdr-nav {
+    grid-column: 7 / span 4;
     display: flex;
-    gap: 0.4rem;
+    gap: 1.4em;
   }
-  .icon-btn {
+  .hdr-nav a {
+    position: relative;
+  }
+  .hdr-nav a[aria-current='page']::before {
+    content: '';
+    position: absolute;
+    left: -0.8em;
+    top: 50%;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    translate: 0 -50%;
+  }
+  .hdr-actions {
+    grid-column: 11 / -1;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 1.1em;
+  }
+  .theme-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+    position: relative;
+    overflow: hidden;
+  }
+  .theme-dot span {
+    position: absolute;
+    inset: 0 0 0 50%;
+    background: currentColor;
+    transition: inset 0.6s var(--ease-out);
+  }
+  .theme-dot:hover span {
+    inset: 0 50% 0 0;
+  }
+  .menu-open {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: 0.45rem;
-    height: 38px;
-    min-width: 38px;
-    padding: 0 0.6rem;
-    border-radius: 999px;
-    border: 1px solid var(--line);
-    background: var(--bg-elev);
-    color: var(--ink-soft);
-    cursor: pointer;
+    gap: 0.7em;
   }
-  .icon-btn:hover {
-    color: var(--accent);
-    border-color: var(--accent);
+  .burger {
+    display: grid;
+    gap: 4px;
   }
-  kbd {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    color: var(--ink-mute);
-  }
-  :global(:root[data-theme='dark']) .sun,
-  :global(:root:not([data-theme='dark'])) .moon {
-    display: none;
-  }
-  .menu-btn {
-    display: none;
-    flex-direction: column;
-    gap: 5px;
-  }
-  .menu-btn span {
-    width: 16px;
+  .burger i {
+    display: block;
+    width: 18px;
     height: 1.5px;
     background: currentColor;
-    transition: transform 0.2s;
+    transition: transform 0.5s var(--ease-out);
   }
-  .is-open .menu-btn span:first-child {
-    transform: translateY(3.25px) rotate(45deg);
+  .menu-open:hover .burger i:first-child {
+    transform: translateX(4px);
   }
-  .is-open .menu-btn span:last-child {
-    transform: translateY(-3.25px) rotate(-45deg);
+  .menu-open:hover .burger i:last-child {
+    transform: translateX(-4px);
   }
 
-  @media (max-width: 900px) {
-    .logo .name {
+  @media (max-width: 1100px) {
+    .hdr-nav {
       display: none;
     }
-    kbd {
+    .hdr-mid {
+      grid-column: 5 / span 5;
+    }
+  }
+  @media (max-width: 720px) {
+    .hdr-mid,
+    .hdr-actions [data-open-search] {
       display: none;
     }
-    .menu-btn {
-      display: inline-flex;
+    .hdr-logo {
+      grid-column: 1 / span 8;
     }
-    nav {
-      position: absolute;
-      top: 68px;
-      left: 0;
-      right: 0;
-      background: var(--bg);
-      border-bottom: 1px solid var(--line);
-      padding: 0.5rem var(--gutter) 1.25rem;
-      display: none;
+    .hdr-actions {
+      grid-column: 9 / -1;
     }
-    .is-open nav {
-      display: block;
-    }
-    nav ul {
-      flex-direction: column;
-    }
-    nav a {
-      font-size: 1.15rem;
-      padding: 0.6em 0.8em;
+  }
+
+  /* ─── Full-screen menu ─── */
+  .menu {
+    position: fixed;
+    inset: 0;
+    z-index: 950;
+    background: var(--night);
+    color: var(--bone);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .menu[hidden] {
+    display: none;
+  }
+  .menu-top {
+    height: var(--header-h);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .menu-close {
+    display: inline-flex;
+    gap: 0.6em;
+    align-items: center;
+  }
+  .menu-links {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-block: 3vh;
+  }
+  .ml {
+    display: flex;
+    align-items: flex-start;
+    gap: clamp(12px, 2vw, 32px);
+    border-top: 1px solid rgb(from var(--bone) r g b / 0.14);
+    overflow: hidden;
+    padding-block: 0.4vh;
+  }
+  .ml:last-child {
+    border-bottom: 1px solid rgb(from var(--bone) r g b / 0.14);
+  }
+  .ml-n {
+    padding-top: 1.1em;
+    min-width: 2.5em;
+    opacity: 0.5;
+  }
+  .ml-t {
+    font-size: clamp(2.6rem, 8.6vh, 7.2rem);
+    transition: transform 0.6s var(--ease-out), color 0.3s;
+  }
+  .ml-c {
+    padding-top: 1em;
+    color: var(--signal);
+  }
+  .ml:hover .ml-t,
+  .ml:focus-visible .ml-t {
+    transform: translateX(0.25em);
+    color: var(--signal);
+  }
+  .ml:hover .ml-t {
+    font-family: var(--f-serif);
+    font-style: italic;
+    text-transform: none;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+  }
+  .ml[aria-current='page'] .ml-t {
+    color: var(--signal);
+  }
+  .menu-foot {
+    display: grid;
+    grid-template-columns: repeat(3, auto);
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding-block: 24px var(--pad);
+    flex-shrink: 0;
+  }
+  .menu-foot > div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+  }
+  .menu-foot .label {
+    color: rgb(from var(--bone) r g b / 0.45);
+  }
+  .menu-socials {
+    display: flex;
+    gap: 1em;
+    flex-wrap: wrap;
+  }
+  @media (max-width: 720px) {
+    .menu-foot {
+      grid-template-columns: 1fr;
     }
   }
 </style>

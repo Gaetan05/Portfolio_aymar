@@ -1,0 +1,235 @@
+---
+/** A shelf ledge of book-spines. Each spine links to its entry on /shelf. */
+import type { CollectionEntry } from 'astro:content';
+import { url, hash } from '../lib/content';
+
+interface Props {
+  items: CollectionEntry<'shelf'>[];
+  tall?: boolean;
+  filterable?: boolean;
+  /** Optional "see everything" pile at the end of the ledge. */
+  more?: { href: string; label: string };
+}
+const { items, tall = false, filterable = false, more } = Astro.props;
+
+const SPINE: Record<string, [string, string]> = {
+  book: ['#ebe7dd', '#0f0f0d'],
+  film: ['#0f0f0d', '#d4ff3a'],
+  series: ['#1e3b2f', '#ebe7dd'],
+  podcast: ['#c9b8ff', '#0f0f0d'],
+  music: ['#ff5b24', '#0f0f0d'],
+  game: ['#2d3cff', '#ebe7dd'],
+  tool: ['#d4ff3a', '#0f0f0d'],
+  place: ['#ff5b24', '#0f0f0d'],
+  article: ['#ebe7dd', '#0f0f0d'],
+  course: ['#2d3cff', '#ebe7dd'],
+  other: ['#c9b8ff', '#0f0f0d'],
+};
+const spines = items.map((s) => {
+  const h = hash(s.id);
+  return {
+    s,
+    height: 66 + (h % 32),
+    width: Math.min(96, Math.max(52, 30 + s.data.title.length * 2.4)),
+    colors: SPINE[s.data.kind],
+    tilt: h % 9 === 0 ? -4 : 0,
+    keys: [s.data.kind, s.data.status, ...(s.data.favorite ? ['favorite'] : []), ...s.data.tags].join('|'),
+  };
+});
+---
+
+<div class:list={['ledge', { tall }]}>
+  {
+    spines.map(({ s, height, width, colors, tilt, keys }) => (
+      <a
+        class="spine"
+        href={url(`shelf#${s.id}`)}
+        style={`--h:${height}%;--w:${width}px;--bg:${colors[0]};--fg:${colors[1]};--tilt:${tilt}deg`}
+        data-cursor={s.data.kind}
+        data-filter-item={filterable ? '' : undefined}
+        data-filter-keys={filterable ? keys : undefined}
+        data-spine={s.id}
+      >
+        <span class="sp-title">{s.data.title}</span>
+        {s.data.favorite && <span class="sp-fav">★</span>}
+        <span class="sp-tip">
+          <strong>{s.data.title}</strong>
+          {s.data.creator && <em>{s.data.creator}</em>}
+          {s.data.note && <span>{s.data.note}</span>}
+        </span>
+      </a>
+    ))
+  }
+  {
+    more && (
+      <a class="pile" href={more.href} data-cursor="Browse">
+        <span class="pile-label mono">{more.label} ↗</span>
+        <span class="slab s1" />
+        <span class="slab s2" />
+        <span class="slab s3" />
+      </a>
+    )
+  }
+</div>
+
+<style>
+  .ledge {
+    height: clamp(300px, 34vw, 460px);
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    border-bottom: 10px solid var(--ink);
+    padding-inline: 8px;
+  }
+  .ledge.tall {
+    height: clamp(320px, 40vw, 560px);
+  }
+  .spine {
+    position: relative;
+    height: var(--h);
+    width: var(--w);
+    flex-shrink: 0;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid rgb(0 0 0 / 0.18);
+    border-radius: 3px 3px 0 0;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    padding: 14px 0;
+    rotate: var(--tilt);
+    transform-origin: bottom left;
+    transition: translate 0.5s var(--ease-out);
+  }
+  .spine::before,
+  .spine::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: currentColor;
+    opacity: 0.35;
+  }
+  .spine::before {
+    top: 10px;
+  }
+  .spine::after {
+    bottom: 12px;
+  }
+  .spine:hover,
+  .spine:focus-visible {
+    translate: 0 -18px;
+    z-index: 5;
+  }
+  .sp-title {
+    writing-mode: vertical-rl;
+    rotate: 180deg;
+    font-family: var(--f-display);
+    font-stretch: 75%;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 1.05rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-height: 80%;
+    margin-top: 8px;
+  }
+  .sp-fav {
+    position: absolute;
+    bottom: 18px;
+    font-size: 0.8rem;
+  }
+  .sp-tip {
+    position: absolute;
+    bottom: calc(100% + 14px);
+    left: 50%;
+    width: 240px;
+    translate: -50% 8px;
+    padding: 14px;
+    background: var(--night);
+    color: var(--bone);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.85rem;
+    line-height: 1.35;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s, translate 0.4s var(--ease-out);
+    z-index: 10;
+  }
+  .sp-tip strong {
+    font-family: var(--f-display);
+    font-stretch: 75%;
+    text-transform: uppercase;
+    font-size: 1.1rem;
+  }
+  .sp-tip em {
+    font-family: var(--f-serif);
+    font-size: 1rem;
+    opacity: 0.8;
+  }
+  .spine:hover .sp-tip,
+  .spine:focus-visible .sp-tip {
+    opacity: 1;
+    translate: -50% 0;
+  }
+  .pile {
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+    padding-left: 24px;
+  }
+  .pile-label {
+    margin-bottom: 12px;
+    color: var(--ink-2);
+    transition: color 0.3s;
+  }
+  .slab {
+    display: block;
+    height: 26px;
+    border: 1px solid rgb(0 0 0 / 0.18);
+    border-radius: 0 3px 3px 0;
+    transition: translate 0.5s var(--ease-out);
+  }
+  .s1 {
+    width: 180px;
+    background: var(--c-cobalt);
+    translate: -10px 0;
+  }
+  .s2 {
+    width: 210px;
+    background: var(--signal);
+  }
+  .s3 {
+    width: 196px;
+    background: var(--ink);
+    translate: -4px 0;
+  }
+  .pile:hover .s1 {
+    translate: -34px 0;
+  }
+  .pile:hover .s2 {
+    translate: 10px 0;
+  }
+  .pile:hover .pile-label {
+    color: var(--ink);
+  }
+  @media (max-width: 900px) {
+    .pile {
+      display: none;
+    }
+    .ledge {
+      overflow-x: auto;
+      height: 300px;
+      padding-top: 24px;
+    }
+    .sp-tip {
+      display: none;
+    }
+  }
+</style>

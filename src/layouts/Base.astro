@@ -1,8 +1,14 @@
 ---
+import '@fontsource-variable/bricolage-grotesque/standard.css';
+import '@fontsource/instrument-serif/400.css';
+import '@fontsource/instrument-serif/400-italic.css';
+import '@fontsource-variable/geist';
+import '@fontsource-variable/geist-mono';
 import '../styles/global.css';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import Search from '../components/Search.astro';
+import Preloader from '../components/Preloader.astro';
 import { site } from '../site.config';
 import { url } from '../lib/content';
 
@@ -12,12 +18,16 @@ interface Props {
   image?: string;
   type?: 'website' | 'article';
   noindex?: boolean;
+  /** Show the first-visit preloader (home page only). */
+  preloader?: boolean;
+  /** Hide the big footer CTA (e.g. on the CV). */
+  bareFooter?: boolean;
 }
 
-const { title, description = site.intro, image, type = 'website', noindex = false } = Astro.props;
-const fullTitle = title ? `${title} · ${site.name}` : `${site.name} — ${site.headline}`;
+const { title, description = site.intro, image, type = 'website', noindex = false, preloader = false, bareFooter = false } = Astro.props;
+const fullTitle = title ? `${title} — ${site.name}` : `${site.name} — ${site.headline}`;
 const canonical = new URL(Astro.url.pathname, Astro.site);
-const ogImage = new URL(image ?? url('og.svg'), Astro.site);
+const ogImage = new URL(image ?? url('og.png'), Astro.site);
 ---
 
 <!doctype html>
@@ -30,6 +40,7 @@ const ogImage = new URL(image ?? url('og.svg'), Astro.site);
     <link rel="canonical" href={canonical} />
     {noindex && <meta name="robots" content="noindex" />}
     <meta property="og:type" content={type} />
+    <meta property="og:site_name" content={site.name} />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
@@ -38,61 +49,50 @@ const ogImage = new URL(image ?? url('og.svg'), Astro.site);
     <link rel="icon" href={url('favicon.svg')} type="image/svg+xml" />
     <link rel="alternate" type="application/rss+xml" title={`${site.name} — Journal`} href={url('rss.xml')} />
     <link rel="sitemap" href={url('sitemap-index.xml')} />
-    <meta name="theme-color" content="#f6f4ef" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0f0f12" media="(prefers-color-scheme: dark)" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..700;1,9..144,400..700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
-    />
+    <meta name="theme-color" content="#ebe7dd" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f0f0d" media="(prefers-color-scheme: dark)" />
     <script is:inline>
       (function () {
-        var t = null;
+        var d = document.documentElement, t = null;
+        d.classList.add('js');
         try { t = localStorage.getItem('theme'); } catch (e) {}
         if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        document.documentElement.dataset.theme = t;
+        d.dataset.theme = t;
+        // Safety net: never leave content hidden if scripts fail.
+        setTimeout(function () { d.classList.add('ready'); }, 3500);
       })();
     </script>
     <slot name="head" />
   </head>
   <body>
-    <a class="skip sr-only" href="#main">Skip to content</a>
+    <a class="skip" href="#main">Skip to content</a>
+    {preloader && <Preloader />}
     <Header />
     <main id="main">
       <slot />
     </main>
-    <Footer />
+    <Footer bare={bareFooter} />
     <Search />
     <script>
-      // Reveal-on-scroll for elements with .reveal
-      const io = new IntersectionObserver(
-        (entries) =>
-          entries.forEach((e) => {
-            if (e.isIntersecting) {
-              e.target.classList.add('is-in');
-              io.unobserve(e.target);
-            }
-          }),
-        { rootMargin: '0px 0px -8% 0px' },
-      );
-      document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+      import '../scripts/app';
     </script>
   </body>
 </html>
 
 <style>
-  .skip:focus {
+  .skip {
     position: fixed;
-    top: 12px;
-    left: 12px;
-    width: auto;
-    height: auto;
-    clip: auto;
-    z-index: 100;
-    background: var(--ink);
-    color: var(--bg);
-    padding: 0.6em 1em;
-    border-radius: 8px;
+    top: 10px;
+    left: 10px;
+    z-index: 10000;
+    padding: 0.7em 1em;
+    background: var(--signal);
+    color: var(--signal-ink);
+    font-family: var(--f-mono);
+    font-size: 0.75rem;
+    transform: translateY(-200%);
+  }
+  .skip:focus {
+    transform: none;
   }
 </style>

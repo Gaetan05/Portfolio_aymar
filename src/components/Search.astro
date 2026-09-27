@@ -2,17 +2,17 @@
 import { url } from '../lib/content';
 ---
 
-<dialog id="search" class="search no-print" data-index={url('search.json')} aria-label="Search the site">
+<dialog id="search" class="search no-print" data-lenis-prevent data-index={url('search.json')} aria-label="Search the site">
   <div class="panel">
     <div class="field">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
         ><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg
       >
-      <input type="search" placeholder="Search projects, notes, hobbies, books…" autocomplete="off" spellcheck="false" />
+      <input type="search" placeholder="Search the atlas…" autocomplete="off" spellcheck="false" />
       <kbd>esc</kbd>
     </div>
     <ul class="results" role="listbox"></ul>
-    <p class="hint meta">Type to search · ↑ ↓ to move · ↵ to open</p>
+    <p class="hint">Type to search · ↑ ↓ to move · ↵ to open</p>
   </div>
 </dialog>
 
@@ -114,20 +114,31 @@ import { url } from '../lib/content';
 
 <style>
   .search {
-    width: min(640px, calc(100vw - 32px));
-    max-height: min(70vh, 560px);
+    width: min(760px, calc(100vw - 32px));
+    max-height: min(74vh, 620px);
     margin: 12vh auto auto;
     padding: 0;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-lg);
-    background: var(--bg-elev);
-    color: var(--ink);
-    box-shadow: 0 30px 80px -20px rgb(0 0 0 / 0.45);
+    border: 0;
+    border-radius: 4px;
+    background: var(--night);
+    color: var(--bone);
+    box-shadow: 0 40px 120px -20px rgb(0 0 0 / 0.6);
     overflow: hidden;
   }
+  .search[open] {
+    animation: pop 0.5s var(--ease-out);
+  }
+  @keyframes pop {
+    from {
+      clip-path: inset(0 0 100% 0);
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
   .search::backdrop {
-    background: rgb(10 10 12 / 0.45);
-    backdrop-filter: blur(4px);
+    background: rgb(15 15 13 / 0.55);
+    backdrop-filter: blur(6px);
   }
   .panel {
     display: flex;
@@ -137,10 +148,10 @@ import { url } from '../lib/content';
   .field {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 1rem 1.2rem;
-    border-bottom: 1px solid var(--line);
-    color: var(--ink-mute);
+    gap: 0.9rem;
+    padding: 1.2rem 1.4rem;
+    border-bottom: 1px solid rgb(235 231 221 / 0.14);
+    color: var(--signal);
   }
   input {
     flex: 1;
@@ -148,54 +159,75 @@ import { url } from '../lib/content';
     border: 0;
     outline: 0;
     background: transparent;
-    color: var(--ink);
-    font: 1.05rem var(--font-body);
+    color: var(--bone);
+    font-family: var(--f-display);
+    font-stretch: 75%;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: clamp(1.6rem, 3.4vw, 2.6rem);
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  input::placeholder {
+    color: rgb(235 231 221 / 0.3);
   }
   input::-webkit-search-cancel-button {
     display: none;
   }
   kbd {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
-    border: 1px solid var(--line);
-    border-radius: 6px;
+    font-family: var(--f-mono);
+    font-size: 0.66rem;
+    border: 1px solid rgb(235 231 221 / 0.3);
+    border-radius: 4px;
     padding: 0.2em 0.45em;
+    color: rgb(235 231 221 / 0.6);
   }
   .results {
     list-style: none;
     margin: 0;
-    padding: 0.5rem;
+    padding: 0.4rem;
     overflow-y: auto;
   }
   .results :global(a) {
     display: flex;
-    gap: 0.9rem;
+    gap: 1rem;
     align-items: baseline;
-    padding: 0.7rem 0.8rem;
-    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    border-radius: 2px;
     text-decoration: none;
+    color: var(--bone);
   }
   .results :global(li[aria-selected='true'] a),
   .results :global(a:hover) {
-    background: var(--accent-soft);
-    color: var(--ink);
+    background: var(--signal);
+    color: var(--night);
   }
   .results :global(.k) {
-    font-family: var(--font-mono);
-    font-size: 0.7rem;
+    font-family: var(--f-mono);
+    font-size: 0.66rem;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--accent);
-    min-width: 78px;
+    letter-spacing: 0.06em;
+    opacity: 0.6;
+    min-width: 88px;
+  }
+  .results :global(.t) {
+    font-size: 1.05rem;
   }
   .results :global(.empty) {
-    padding: 1.5rem;
-    color: var(--ink-mute);
+    padding: 2rem;
+    font-family: var(--f-serif);
+    font-style: italic;
+    font-size: 1.4rem;
     text-align: center;
+    opacity: 0.7;
   }
   .hint {
     margin: 0;
-    padding: 0.7rem 1.2rem;
-    border-top: 1px solid var(--line);
+    padding: 0.8rem 1.4rem;
+    border-top: 1px solid rgb(235 231 221 / 0.14);
+    font-family: var(--f-mono);
+    font-size: 0.66rem;
+    text-transform: uppercase;
+    color: rgb(235 231 221 / 0.5);
   }
 </style>

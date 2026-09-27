@@ -1,0 +1,64 @@
+---
+import { site } from '../site.config';
+const words = site.name.split(' ');
+---
+
+<div class="preloader no-print" aria-hidden="true">
+  <script is:inline>
+    try { if (sessionStorage.getItem('seen') === '1') document.currentScript.parentElement.style.display = 'none'; } catch (e) {}
+  </script>
+  <div class="pl-top pad">
+    <span class="mono">Field Atlas</span>
+    <span class="mono">Vol. {new Date().getFullYear()}</span>
+  </div>
+  <div class="pl-name pad display">
+    {words.map((w) => <span class="pl-mask"><span class="pl-word">{w}</span></span>)}
+  </div>
+  <div class="pl-bottom pad">
+    <span class="mono">Loading a curious life</span>
+    <span class="pl-count display">000</span>
+  </div>
+</div>
+
+<style>
+  .preloader {
+    position: fixed;
+    inset: 0;
+    z-index: 9800;
+    background: var(--night);
+    color: var(--bone);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding-block: var(--pad);
+    clip-path: inset(0 0 0 0);
+  }
+  html:not(.js) .preloader {
+    display: none;
+  }
+  .pl-top,
+  .pl-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+  }
+  .pl-name {
+    font-size: clamp(3rem, 12vw, 12rem);
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 0.25em;
+  }
+  .pl-mask {
+    overflow: hidden;
+    display: inline-block;
+    padding-top: 0.16em;
+  }
+  .pl-word {
+    display: inline-block;
+  }
+  .pl-count {
+    font-size: clamp(4rem, 14vw, 13rem);
+    color: var(--signal);
+    font-variant-numeric: tabular-nums;
+  }
+</style>

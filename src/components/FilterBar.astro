@@ -1,77 +1,55 @@
 ---
 /**
- * Client-side filter chips. Items to filter need:
+ * Client-side filter chips. Items to filter need
  *   data-filter-item  data-filter-keys="key1|key2"
- * inside the element referenced by `target` (a CSS selector).
+ * inside the element referenced by `target`. Optional wrappers with
+ * data-filter-group are hidden when they end up empty.
  */
 interface Props {
   target: string;
   options: { key: string; label: string; count?: number }[];
   allLabel?: string;
 }
-const { target, options, allLabel = 'All' } = Astro.props;
+const { target, options, allLabel = 'Everything' } = Astro.props;
 ---
 
 <div class="filters no-print" data-filter-bar data-target={target} role="toolbar" aria-label="Filter">
-  <button type="button" class="chip" aria-pressed="true" data-key="">{allLabel}</button>
+  <button type="button" aria-pressed="true" data-key="">{allLabel}</button>
   {
     options.map((o) => (
-      <button type="button" class="chip" aria-pressed="false" data-key={o.key}>
+      <button type="button" aria-pressed="false" data-key={o.key}>
         {o.label}
-        {o.count !== undefined && <span class="n">{o.count}</span>}
+        {o.count !== undefined && <sup>{o.count}</sup>}
       </button>
     ))
   }
 </div>
 
 <script>
+  import { gsap, ScrollTrigger } from '../scripts/app';
   document.querySelectorAll<HTMLElement>('[data-filter-bar]').forEach((bar) => {
     const root = document.querySelector(bar.dataset.target!);
     if (!root) return;
     const buttons = [...bar.querySelectorAll<HTMLButtonElement>('button')];
-    const apply = (key: string) => {
+    const apply = (key: string, animate = true) => {
       buttons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.key === key)));
+      const shown: HTMLElement[] = [];
       root.querySelectorAll<HTMLElement>('[data-filter-item]').forEach((el) => {
         const keys = (el.dataset.filterKeys ?? '').split('|');
         el.hidden = key !== '' && !keys.includes(key);
-        if (!el.hidden) el.classList.add('is-in');
+        if (!el.hidden) shown.push(el);
       });
-      // Hide group wrappers (e.g. year headings) that have no visible items left.
       root.querySelectorAll<HTMLElement>('[data-filter-group]').forEach((g) => {
         g.hidden = !g.querySelector('[data-filter-item]:not([hidden])');
       });
-      const url = new URL(location.href);
-      key ? url.searchParams.set('filter', key) : url.searchParams.delete('filter');
-      history.replaceState(null, '', url);
+      if (animate) gsap.fromTo(shown, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6, stagger: 0.03, ease: 'expo.out', clearProps: 'all' });
+      ScrollTrigger.refresh();
+      const u = new URL(location.href);
+      key ? u.searchParams.set('filter', key) : u.searchParams.delete('filter');
+      history.replaceState(null, '', u);
     };
     buttons.forEach((b) => b.addEventListener('click', () => apply(b.dataset.key!)));
     const initial = new URL(location.href).searchParams.get('filter');
-    if (initial && buttons.some((b) => b.dataset.key === initial)) apply(initial);
+    if (initial && buttons.some((b) => b.dataset.key === initial)) apply(initial, false);
   });
 </script>
-
-<style>
-  .filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.45rem;
-    margin-bottom: 2rem;
-  }
-  button {
-    cursor: pointer;
-    font-size: 0.78rem;
-    padding: 0.55em 0.9em;
-  }
-  button:hover {
-    border-color: var(--ink-mute);
-    color: var(--ink);
-  }
-  button[aria-pressed='true'] {
-    background: var(--ink);
-    color: var(--bg);
-    border-color: var(--ink);
-  }
-  .n {
-    opacity: 0.55;
-  }
-</style>

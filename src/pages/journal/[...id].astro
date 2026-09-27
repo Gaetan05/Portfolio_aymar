@@ -7,28 +7,32 @@ export async function getStaticPaths() {
   const entries = await getJournal();
   return entries.map((e, i) => ({
     params: { id: e.id },
-    props: { entry: e, prev: entries[i - 1], next: entries[i + 1] },
+    props: { entry: e, next: entries[i + 1] ?? entries[0] },
   }));
 }
 
-const { entry, prev, next } = Astro.props;
+const { entry, next } = Astro.props;
 const { Content, headings } = await render(entry);
 const d = entry.data;
-const meta = [formatDate(d.date, { year: 'numeric', month: 'long', day: 'numeric' }), `${readingTime(entry.body)} min read`];
-if (d.updated) meta.push(`Updated ${formatDate(d.updated)}`);
+const specs = [
+  { k: 'Published', v: formatDate(d.date, { year: 'numeric', month: 'long', day: 'numeric' }) },
+  { k: 'Reading', v: `${readingTime(entry.body)} min` },
+  { k: 'Type', v: kindLabel[d.kind] },
+  ...(d.updated ? [{ k: 'Updated', v: formatDate(d.updated) }] : []),
+];
 ---
 
 <Entry
   title={d.title}
   description={d.description}
-  eyebrow={kindLabel[d.kind]}
+  eyebrow={`Journal — ${kindLabel[d.kind]}`}
   back={{ href: url('journal'), label: 'Journal' }}
-  meta={meta}
+  specs={specs}
   tags={d.tags}
   cover={d.cover}
+  art={d.kind === 'essay' ? { seed: d.title, pattern: 0 } : false}
   headings={headings}
-  prev={prev && { href: url(`journal/${prev.id}`), title: prev.data.title }}
-  next={next && { href: url(`journal/${next.id}`), title: next.data.title }}
+  next={next && next.id !== entry.id ? { href: url(`journal/${next.id}`), title: next.data.title, label: 'Keep reading' } : undefined}
 >
   <Content />
 </Entry>
